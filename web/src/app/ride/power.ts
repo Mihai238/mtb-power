@@ -54,7 +54,7 @@ export const SPEED_SMOOTHING_S = 5; // GPS speed jitter turns into fake accelera
 export const GRADE_HALF_WINDOW_M = 25; // grade measured over 50 m of distance
 export const MAX_GRADE = 0.35;
 export const STOPPED_SPEED = 0.5; // m/s; below this the rider is treated as standing still
-export const DISPLAY_SMOOTHING_S = 30; // 1-second estimates are too noisy to read directly
+export const DISPLAY_SMOOTHING_S = 10; // 1-second estimates are too noisy to read directly
 export const NP_WINDOW_S = 30; // fixed by the definition of Normalized Power
 
 export interface PowerEstimate {
