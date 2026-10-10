@@ -1,5 +1,5 @@
 import {
-  acceleration, airDensity, estimatePower, G, gradeFromAltitude, MAX_GRADE, MTB,
+  acceleration, airDensity, averagePower, estimatePower, G, gradeFromAltitude, MAX_GRADE, MTB,
   normalizedPower, rollingMean, sampleDurations, segmentBounds,
 } from './power';
 import { Ride } from './ride';
@@ -135,5 +135,24 @@ describe('estimatePower', () => {
   it('counts standing still and coasting downhill as 0 W', () => {
     expect(Array.from(estimatePower(steadyRide(30, 0.2), 90)!.watts).every(w => w === 0)).toBe(true);
     expect(estimatePower(steadyRide(120, 12, -0.08), 90)!.watts[60]).toBe(0);
+  });
+});
+
+describe('averagePower', () => {
+  it('averages a slice of the ride, weighted by sample duration and skipping missing values', () => {
+    const power = estimatePower(steadyRide(10, 5), 90)!;
+    power.watts.set([100, 200, NaN, 300, 400]);
+    power.durations.set([1, 1, 1, 2, 1]);
+    expect(averagePower(power, 1, 5)).toBeCloseTo((200 + 300 * 2 + 400) / 4, 12);
+  });
+
+  it('matches the ride average over the whole ride', () => {
+    const power = estimatePower(steadyRide(60, 5, 0.05), 90)!;
+    expect(averagePower(power, 0, 60)).toBeCloseTo(power.average, 9);
+  });
+
+  it('is NaN for a slice without data', () => {
+    const power = estimatePower(steadyRide(10, 5), 90)!;
+    expect(averagePower(power, 3, 3)).toBeNaN();
   });
 });

@@ -72,7 +72,10 @@
       } @placeholder {
         <div class="chart"></div>
       }
-      <p class="note">Pinch or ctrl + scroll to zoom, drag to pan.</p>
+      <p class="note">
+        Pinch or ctrl + scroll to zoom, shift + drag to pan.
+        @if (view.power) { Drag across the chart to see the average power of that stretch, click to clear. }
+      </p>
     }
   } @else if (!loadError()) {
     <div class="empty">Open a .fit file to see its heart rate and estimated power.</div>

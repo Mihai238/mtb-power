@@ -11,6 +11,9 @@ const ALTITUDE_COLOR = '#e0e0e0';
 const AVERAGE_COLOR = '#666';
 const PAUSE_COLOR = '#999';
 const GRID_COLOR = '#e6e6e6';
+const SELECTION_COLOR = 'rgba(28, 126, 214, 0.12)';
+
+export const POWER_SERIES_ID = 'power';
 
 export interface ChartInput {
   ride: Ride;
@@ -79,7 +82,7 @@ export function buildChartOption({ ride, power, title, showHr }: ChartInput):
       splitLine: showHr ? { show: false } : { lineStyle: { color: GRID_COLOR } },
     });
     series.push({
-      ...dataLine, name, yAxisIndex: index, z: 2,
+      ...dataLine, id: POWER_SERIES_ID, name, yAxisIndex: index, z: 2,
       data: withGaps(minutes, power.smoothed),
       lineStyle: { color: POWER_COLOR, width: 1.2, opacity: showHr ? 0.85 : 1 },
       itemStyle: { color: POWER_COLOR, borderColor: '#fff', borderWidth: 1.5 },
@@ -160,8 +163,9 @@ export function buildChartOption({ ride, power, title, showHr }: ChartInput):
     },
     dataZoom: [{
       type: 'inside', xAxisIndex: 0, filterMode: 'none',
-      // Pinch or ctrl+scroll zooms; plain scrolling keeps scrolling the page.
-      zoomOnMouseWheel: 'ctrl', moveOnMouseWheel: false, moveOnMouseMove: true,
+      // Pinch or ctrl+scroll zooms; plain scrolling keeps scrolling the page. A plain drag
+      // selects a stretch of the ride (see RideChart), so panning needs shift.
+      zoomOnMouseWheel: 'ctrl', moveOnMouseWheel: false, moveOnMouseMove: 'shift',
     }],
     toolbox: {
       left: 4, bottom: 4, itemSize: 14,
@@ -170,5 +174,21 @@ export function buildChartOption({ ride, power, title, showHr }: ChartInput):
         saveAsImage: { title: 'Save as PNG', name: title.replace(/\.fit$/i, ''), pixelRatio: 2 },
       },
     },
+  };
+}
+
+/** Shading for a selected stretch [from, to] (minutes), labelled with its average power. */
+export function selectionMarkArea(from: number, to: number, averageW: number):
+    Record<string, unknown> {
+  return {
+    silent: true, animation: false,
+    itemStyle: { color: SELECTION_COLOR },
+    label: {
+      show: Number.isFinite(averageW), position: 'insideTop', distance: 8,
+      formatter: `avg ${averageW.toFixed(0)} W`,
+      color: POWER_COLOR, fontWeight: 600, fontSize: 13,
+      backgroundColor: 'rgba(255, 255, 255, 0.85)', padding: [3, 6], borderRadius: 4,
+    },
+    data: [[{ xAxis: Math.min(from, to) }, { xAxis: Math.max(from, to) }]],
   };
 }

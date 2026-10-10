@@ -223,6 +223,19 @@ export function estimatePower(ride: Ride, totalMassKg: number,
   };
 }
 
+/** Time-weighted average of samples [from, to), like PowerEstimate.average; NaN without data. */
+export function averagePower({ watts, durations }: PowerEstimate, from: number, to: number): number {
+  let work = 0;
+  let seconds = 0;
+  for (let i = Math.max(from, 0); i < Math.min(to, watts.length); i++) {
+    if (Number.isFinite(watts[i])) {
+      work += watts[i] * durations[i];
+      seconds += durations[i];
+    }
+  }
+  return seconds > 0 ? work / seconds : NaN;
+}
+
 /**
  * 4th root of the time-weighted mean of the 30 s rolling average to the 4th power, so
  * hard efforts count more than steady riding. Like the average, it covers moving
