@@ -1,0 +1,80 @@
+<main (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)"
+      [class.dragging]="dragging()">
+  <header>
+    <h1>Cycling power</h1>
+    <p>Heart rate and estimated power from a .fit ride. The file is read in your browser and never uploaded.</p>
+  </header>
+
+  <section class="controls" aria-label="Ride and settings">
+    <label class="file">
+      <input type="file" accept=".fit" (change)="onFileInput($event)">
+      <span class="file-button">{{ loaded() ? 'Open another file' : 'Choose .fit file' }}</span>
+      <span class="file-hint">{{ loaded()?.fileName ?? 'or drop it anywhere on the page' }}</span>
+    </label>
+
+    <div class="settings">
+      <label>
+        Rider
+        <span class="unit-input">
+          <input type="number" min="1" step="0.5" [value]="riderWeight()"
+                 (input)="riderWeight.set(numberFrom($event))"> kg
+        </span>
+      </label>
+      <label>
+        Bike + gear
+        <span class="unit-input">
+          <input type="number" min="0" step="0.5" [value]="bikeWeight()"
+                 (input)="bikeWeight.set(numberFrom($event))"> kg
+        </span>
+      </label>
+      <fieldset class="segmented">
+        <legend>Show</legend>
+        @for (option of showOptions; track option.value) {
+          <label>
+            <input type="radio" name="show" [value]="option.value" [checked]="show() === option.value"
+                   (change)="show.set(valueFrom($event))">
+            <span>{{ option.label }}</span>
+          </label>
+        }
+      </fieldset>
+    </div>
+  </section>
+
+  @if (loadError(); as error) {
+    <p class="message error" role="alert">{{ error }}</p>
+  }
+
+  @if (view(); as view) {
+    @for (notice of view.notices; track notice) {
+      <p class="message">{{ notice }}</p>
+    }
+    @if (view.error) {
+      <p class="message error" role="alert">{{ view.error }}</p>
+    } @else {
+      <dl class="stats">
+        @for (stat of view.stats; track stat.label) {
+          <div>
+            <dt>{{ stat.label }}</dt>
+            <dd>{{ stat.value }} <span>{{ stat.unit }}</span></dd>
+          </div>
+        }
+      </dl>
+      @if (view.power) {
+        <p class="note">
+          Power is estimated from speed and elevation for a mountain bike and {{ totalMass() }} kg rider + bike,
+          shown as a {{ smoothingS }} s average.
+        </p>
+      }
+      @defer {
+        <app-ride-chart class="chart"
+                        [ride]="loaded()!.ride" [power]="view.power" [title]="loaded()!.fileName"
+                        [showHr]="view.showHr" />
+      } @placeholder {
+        <div class="chart"></div>
+      }
+      <p class="note">Pinch or ctrl + scroll to zoom, drag to pan.</p>
+    }
+  } @else if (!loadError()) {
+    <div class="empty">Open a .fit file to see its heart rate and estimated power.</div>
+  }
+</main>
