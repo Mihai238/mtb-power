@@ -8,7 +8,7 @@ Everything runs in the browser; the file is never uploaded.
 
 ```bash
 npm install
-npx ng serve        # http://localhost:4200
+npx ng serve        # http://localhost:4300
 ```
 
 Use `npx ng` rather than a global `ng`, so the project's Angular CLI version is used.
