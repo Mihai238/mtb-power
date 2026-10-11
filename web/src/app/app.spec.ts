@@ -56,4 +56,61 @@ describe('App', () => {
       'Max power on climbs (10 s)', 'Work on climbs',
     ]);
   });
+
+  it('keeps the chart and heart rate while a weight is being retyped', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    app['loaded'].set({ fileName: 'climb.fit', ride: climbingRide() });
+    app['riderWeight'].set(NaN);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(page.querySelector('.message')?.textContent).toContain('Enter rider, bike and gear weights');
+    expect(page.querySelector('.chart')).not.toBeNull();
+    expect(Array.from(page.querySelectorAll('.stats dt'), dt => dt.textContent))
+      .toEqual(['Climbing', 'Avg HR on climbs', 'Max HR on climbs']);
+  });
+
+  it('keeps the chart of a ride without heart rate while a weight is being retyped', async () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    const ride = climbingRide();
+    ride.heartRate.fill(NaN);
+    app['loaded'].set({ fileName: 'climb.fit', ride });
+    app['riderWeight'].set(NaN);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('[role="alert"]')).toBeNull();
+    expect(Array.from(page.querySelectorAll('.message'), m => m.textContent?.trim())).toEqual([
+      'No heart rate data in this file.', 'Enter rider, bike and gear weights to estimate power.',
+    ]);
+    expect(page.querySelector('.chart')).not.toBeNull();
+  });
+
+  it("names missing speed/altitude data, not the weight, when power can't be estimated", async () => {
+    const page = async (heartRate: boolean, riderKg: number) => {
+      const fixture = TestBed.createComponent(App);
+      const ride = climbingRide();
+      ride.altitude.fill(NaN);
+      if (!heartRate) ride.heartRate.fill(NaN);
+      fixture.componentInstance['loaded'].set({ fileName: 'trainer.fit', ride });
+      fixture.componentInstance['riderWeight'].set(riderKg);
+      await fixture.whenStable();
+      return fixture.nativeElement as HTMLElement;
+    };
+    const noData = "No speed/altitude data in this file, so power can't be estimated.";
+    // Without heart rate there's nothing to plot, whatever the weight.
+    for (const riderKg of [80, NaN]) {
+      const alone = await page(false, riderKg);
+      expect(alone.querySelector('[role="alert"]')?.textContent).toBe(noData);
+      expect(alone.querySelector('.chart')).toBeNull();
+    }
+    // With heart rate, the chart stays and the notice names the data, even with no weight.
+    const withHr = await page(true, NaN);
+    expect(withHr.querySelector('[role="alert"]')).toBeNull();
+    const notices = Array.from(withHr.querySelectorAll('.message'), m => m.textContent?.trim());
+    expect(notices).toContain(noData);
+    expect(notices.some(n => n?.includes('weights'))).toBe(false);
+    expect(withHr.querySelector('.chart')).not.toBeNull();
+  });
 });

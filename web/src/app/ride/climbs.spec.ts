@@ -1,4 +1,4 @@
-import { climbTotals, detectClimbs } from './climbs';
+import { climbTotals, detectClimbs, summarizeClimbs } from './climbs';
 import { averagePower, estimatePower } from './power';
 import { Ride } from './ride';
 
@@ -120,5 +120,17 @@ describe('climbTotals', () => {
     const totals = climbTotals(climbing, detectClimbs(climbing), null);
     expect(totals.movingSeconds).toBeGreaterThan(0);
     expect(totals.powerAvg).toBeNaN();
+  });
+});
+
+describe('summarizeClimbs', () => {
+  it("adds each climb's average power and the totals", () => {
+    const ride = profileRide([[0, 100], [500, 100], [1500, 160], [2500, 160], [3000, 190]]);
+    const climbs = detectClimbs(ride);
+    const power = estimatePower(ride, 90)!;
+    const summary = summarizeClimbs(ride, climbs, power);
+    expect(summary.watts).toEqual(climbs.map(c => averagePower(power, c.from, c.to)));
+    expect(summary.totals).toEqual(climbTotals(ride, climbs, power));
+    expect(summarizeClimbs(ride, climbs, null).watts).toEqual([NaN, NaN]);
   });
 });

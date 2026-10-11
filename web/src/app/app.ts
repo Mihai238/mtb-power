@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 
+import { ClimbText, formatClimb, formatPerKg, UNKNOWN } from './climb-format';
 import { RideChart } from './ride-chart/ride-chart';
-import { climbTotals, detectClimbs, formatDuration } from './ride/climbs';
-import { averagePower, DISPLAY_SMOOTHING_S, estimatePower, PowerEstimate } from './ride/power';
+import { detectClimbs, summarizeClimbs } from './ride/climbs';
+import { DISPLAY_SMOOTHING_S, estimatePower, hasPowerData } from './ride/power';
 import { hasHeartRate, Ride } from './ride/ride';
 import { movingMinutes } from './ride/timeline';
 
@@ -14,25 +15,17 @@ interface Loaded {
   ride: Ride;
 }
 
-/** What to plot for the current file and settings, mirroring the command-line version. */
+/** Messages and stats for the current file and settings. */
 interface View {
   showHr: boolean;
-  power: PowerEstimate | null;
   notices: string[];
   error: string | null;
   stats: { label: string; value: string; unit: string }[];
 }
 
-/** One row of the climbs table, formatted; '–' where a value is unknown. */
-interface ClimbRow {
-  start: string;
-  length: string;
-  gain: string;
-  grade: string;
-  time: string;
-  vam: string;
-  power: string;
-  perKg: string;
+/** One row of the climbs table. */
+interface ClimbRow extends ClimbText {
+  start: string; // moving minutes, as on the chart's time axis
 }
 
 @Component({
@@ -61,32 +54,40 @@ export class App {
     return loaded ? detectClimbs(loaded.ride) : [];
   });
 
-  protected readonly climbRows = computed<ClimbRow[]>(() => {
+  protected readonly timeline = computed(() => {
     const loaded = this.loaded();
-    if (!loaded) return [];
-    const power = this.view()?.power ?? null;
+    return loaded ? movingMinutes(loaded.ride.seconds) : null;
+  });
+
+  // Null without a usable weight or without the speed/altitude data the model needs.
+  protected readonly power = computed(() => {
+    const loaded = this.loaded();
+    const mass = this.totalMass();
+    return loaded && mass > 0 ? estimatePower(loaded.ride, mass) : null;
+  });
+
+  // Each climb's average power and the totals over all climbs, for the stats, table and chart.
+  protected readonly climbSummary = computed(() => {
+    const loaded = this.loaded();
+    return loaded ? summarizeClimbs(loaded.ride, this.climbs(), this.power()) : null;
+  });
+
+  protected readonly climbRows = computed<ClimbRow[]>(() => {
+    const summary = this.climbSummary();
+    const timeline = this.timeline();
+    if (!summary || !timeline) return [];
     const riderKg = this.riderWeight();
-    const { minutes } = movingMinutes(loaded.ride.seconds);
-    return this.climbs().map(climb => {
-      const watts = power ? averagePower(power, climb.from, climb.to) : NaN;
-      return {
-        start: minutes[climb.from].toFixed(1),
-        length: (climb.lengthM / 1000).toFixed(2),
-        gain: climb.gainM.toFixed(0),
-        grade: (climb.grade * 100).toFixed(1),
-        time: formatDuration(climb.movingSeconds),
-        vam: climb.vamMPerH.toFixed(0),
-        power: Number.isFinite(watts) ? watts.toFixed(0) : '–',
-        perKg: Number.isFinite(watts) && riderKg > 0 ? (watts / riderKg).toFixed(1) : '–',
-      };
-    });
+    return summary.climbs.map((climb, k) => ({
+      start: timeline.minutes[climb.from].toFixed(1),
+      ...formatClimb(climb, summary.watts[k], riderKg),
+    }));
   });
 
   protected readonly view = computed<View | null>(() => {
     const loaded = this.loaded();
     if (!loaded) return null;
     const { ride } = loaded;
-    const view: View = { showHr: false, power: null, notices: [], error: null, stats: [] };
+    const view: View = { showHr: false, notices: [], error: null, stats: [] };
 
     if (ride.seconds.length === 0) {
       view.error = 'This file has no recorded samples.';
@@ -96,30 +97,29 @@ export class App {
     const showHr = hasHeartRate(ride);
     if (!showHr) view.notices.push('No heart rate data in this file.');
 
-    const mass = this.totalMass();
-    if (!(mass > 0)) {
-      view.error = 'Enter rider and bike weights to estimate power.';
-      return view;
-    }
-    const power = estimatePower(ride, mass);
-    if (!power) {
+    const power = this.power();
+    if (!power && !hasPowerData(ride)) {
+      // Without heart rate or speed/altitude there's nothing to plot.
+      const reason = "No speed/altitude data in this file, so power can't be estimated.";
       if (!showHr) {
-        view.error = "No speed/altitude data in this file, so power can't be estimated.";
+        view.error = reason;
         return view;
       }
-      view.notices.push("No speed/altitude data in this file, so power can't be estimated.");
-    } else {
-      view.power = power;
+      view.notices.push(reason);
+    } else if (!power) {
+      // The data is there, so a weight is being retyped: only a notice, so the chart (with
+      // at least the elevation profile) and its zoom stay put.
+      view.notices.push('Enter rider, bike and gear weights to estimate power.');
     }
     view.showHr = showHr;
 
     // Stats cover the climbs only: that's where the power estimate holds up.
-    const climbs = this.climbs();
-    if (!climbs.length) {
+    const summary = this.climbSummary()!;
+    if (!summary.climbs.length) {
       view.notices.push('No climbs in this ride, so there are no stats.');
       return view;
     }
-    const totals = climbTotals(ride, climbs, view.power);
+    const { totals } = summary;
     const stat = (label: string, value: number, digits: number, unit: string) => {
       if (Number.isFinite(value)) view.stats.push({ label, value: value.toFixed(digits), unit });
     };
@@ -128,10 +128,10 @@ export class App {
       stat('Avg HR on climbs', totals.heartRateAvg, 0, 'bpm');
       stat('Max HR on climbs', totals.heartRateMax, 0, 'bpm');
     }
-    if (view.power) {
-      const riderKg = this.riderWeight();
-      const perKg = riderKg > 0 ? ` (${(totals.powerAvg / riderKg).toFixed(1)} W/kg)` : '';
-      stat('Avg power on climbs', totals.powerAvg, 0, `W${perKg}`);
+    if (power) {
+      const perKg = formatPerKg(totals.powerAvg, this.riderWeight());
+      const unit = perKg === UNKNOWN ? 'W' : `W (${perKg} W/kg)`;
+      stat('Avg power on climbs', totals.powerAvg, 0, unit);
       stat(`Max power on climbs (${DISPLAY_SMOOTHING_S} s)`, totals.powerMax, 0, 'W');
       stat('Work on climbs', totals.workJoules / 1000, 0, 'kJ');
     }

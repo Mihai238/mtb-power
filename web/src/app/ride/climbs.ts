@@ -6,7 +6,7 @@
  * getting any higher, so short dips and brief flat bits stay part of the climb.
  */
 
-import { PowerEstimate, sampleDurations, segmentBounds } from './power';
+import { averagePower, PowerEstimate, sampleDurations, segmentBounds } from './power';
 import { Ride } from './ride';
 
 export const CLIMB_END_DROP_M = 5;
@@ -108,7 +108,7 @@ export interface ClimbTotals {
   movingSeconds: number;
   heartRateAvg: number;
   heartRateMax: number;
-  powerAvg: number; // time-weighted, like PowerEstimate.average
+  powerAvg: number; // time-weighted, like averagePower()
   powerMax: number; // of the display-smoothed power
   workJoules: number;
 }
@@ -151,8 +151,18 @@ export function climbTotals(ride: Ride, climbs: Climb[], power: PowerEstimate | 
   };
 }
 
-/** m:ss, e.g. 11:07. */
-export function formatDuration(seconds: number): string {
-  const s = Math.round(seconds);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+/** The climbs of a ride with each one's average power and their totals. */
+export interface ClimbSummary {
+  climbs: Climb[];
+  watts: number[]; // average power of each climb; NaN without a power estimate
+  totals: ClimbTotals;
+}
+
+export function summarizeClimbs(ride: Ride, climbs: Climb[],
+                                power: PowerEstimate | null): ClimbSummary {
+  return {
+    climbs,
+    watts: climbs.map(c => (power ? averagePower(power, c.from, c.to) : NaN)),
+    totals: climbTotals(ride, climbs, power),
+  };
 }

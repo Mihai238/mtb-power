@@ -1,11 +1,16 @@
 import { diff, median } from './arrays';
+import { SEGMENT_GAP_S } from './ride';
 
-// Samples further apart than this are drawn as a gap (strap dropout, auto-pause)
-// instead of a straight line bridging the missing data.
-export const GAP_MINUTES = 10 / 60;
+// Samples further apart than this are a pause: cut out of the time axis and marked.
+export const GAP_MINUTES = SEGMENT_GAP_S / 60;
 
 /** Time axis with every pause cut out, plus where each pause was on that axis. */
-export function movingMinutes(seconds: Float64Array): { minutes: Float64Array; pauseAt: number[] } {
+export interface Timeline {
+  minutes: Float64Array;
+  pauseAt: number[];
+}
+
+export function movingMinutes(seconds: Float64Array): Timeline {
   if (seconds.length < 2) return { minutes: seconds.map(s => s / 60), pauseAt: [] };
   const dt = diff(seconds);
   // A pause shrinks to one ordinary recording interval, so the line continues smoothly.

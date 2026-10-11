@@ -56,7 +56,7 @@
           </div>
         }
       </dl>
-      @if (view.power) {
+      @if (power()) {
         <p class="note">
           Power is estimated from speed and elevation for a mountain bike and {{ totalMass() }} kg rider + bike + gear,
           plotted only on climbs, as a {{ smoothingS }} s average.
@@ -64,14 +64,15 @@
       }
       @defer {
         <app-ride-chart class="chart"
-                        [ride]="loaded()!.ride" [power]="view.power" [title]="loaded()!.fileName"
-                        [showHr]="view.showHr" [climbs]="climbs()" [riderKg]="riderWeight()" />
+                        [ride]="loaded()!.ride" [timeline]="timeline()!" [power]="power()"
+                        [title]="loaded()!.fileName"
+                        [showHr]="view.showHr" [climbs]="climbSummary()!" [riderKg]="riderWeight()" />
       } @placeholder {
         <div class="chart"></div>
       }
       <p class="note">
         Pinch or ctrl + scroll to zoom, shift + drag to pan.
-        @if (view.power) { Drag across the chart to see the average power of that stretch, click to clear. }
+        @if (power()) { Drag across the chart to see the average power of that stretch, click to clear. }
       </p>
       @let rows = climbRows();
       @if (rows.length) {
@@ -88,7 +89,7 @@
                   <th>Grade <span>%</span></th>
                   <th>Time <span>m:ss</span></th>
                   <th>VAM <span>m/h</span></th>
-                  @if (view.power) {
+                  @if (power()) {
                     <th>Avg power <span>W</span></th>
                     <th>W/kg</th>
                   }
@@ -104,7 +105,7 @@
                     <td>{{ row.grade }}</td>
                     <td>{{ row.time }}</td>
                     <td>{{ row.vam }}</td>
-                    @if (view.power) {
+                    @if (power()) {
                       <td>{{ row.power }}</td>
                       <td>{{ row.perKg }}</td>
                     }

@@ -11,10 +11,10 @@ import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 
 import { searchLeft, searchRight } from '../ride/arrays';
-import { Climb } from '../ride/climbs';
+import { ClimbSummary } from '../ride/climbs';
 import { averagePower, PowerEstimate } from '../ride/power';
 import { Ride } from '../ride/ride';
-import { movingMinutes } from '../ride/timeline';
+import { Timeline } from '../ride/timeline';
 import { buildChartOption, POWER_SERIES_ID, selectionMarkArea } from './chart-option';
 
 echarts.use([
@@ -39,30 +39,38 @@ interface PointerEvent {
 })
 export class RideChart {
   readonly ride = input.required<Ride>();
+  readonly timeline = input.required<Timeline>();
   readonly power = input<PowerEstimate | null>(null);
   readonly title = input('');
   readonly showHr = input(true);
-  readonly climbs = input<Climb[]>([]);
+  readonly climbs = input.required<ClimbSummary>();
   readonly riderKg = input(0);
 
   private readonly container = viewChild.required<ElementRef<HTMLDivElement>>('chart');
   private readonly destroyRef = inject(DestroyRef);
   private chart?: echarts.ECharts;
-  private minutes: Float64Array = new Float64Array();
   // Selected stretch in moving minutes, kept across redraws (e.g. a new weight).
   private selection: [number, number] | null = null;
+  // The ride last drawn: redrawing the same ride keeps the zoom, a new one starts unzoomed.
+  private drawnRide?: Ride;
   private dragStartPx: number | null = null;
 
   constructor() {
     afterRenderEffect(() => {
       const ride = this.ride();
       const option = buildChartOption({
-        ride, power: this.power(), title: this.title(), showHr: this.showHr(),
-        climbs: this.climbs(), riderKg: this.riderKg(),
+        ride, timeline: this.timeline(), power: this.power(), title: this.title(),
+        showHr: this.showHr(), climbs: this.climbs(), riderKg: this.riderKg(),
       });
-      this.minutes = movingMinutes(ride.seconds).minutes;
       if (!this.chart) this.chart = this.init(this.container().nativeElement);
-      this.chart.setOption(option, { notMerge: true });
+      const sameRide = ride === this.drawnRide;
+      // A selection on another ride means nothing on this one.
+      if (!sameRide) this.selection = null;
+      const zoom = sameRide ? this.zoomRange() : null;
+      // Lazy, so the redraw, the zoom and the selection render once together.
+      this.chart.setOption(option, { notMerge: true, lazyUpdate: true });
+      if (zoom) this.chart.setOption({ dataZoom: [zoom] }, { lazyUpdate: true });
+      this.drawnRide = ride;
       this.drawSelection();
     });
   }
@@ -102,10 +110,17 @@ export class RideChart {
     return chart;
   }
 
+  /** The current zoom, as percentages of the time axis. */
+  private zoomRange(): { start: number; end: number } | null {
+    const [zoom] = (this.chart?.getOption()['dataZoom'] ?? []) as { start: number; end: number }[];
+    return zoom ? { start: zoom.start, end: zoom.end } : null;
+  }
+
   /** Moving minutes under a horizontal pixel position, clamped to the ride. */
   private toMinutes(x: number): number {
     const value = this.chart!.convertFromPixel({ xAxisIndex: 0 }, x) as number;
-    const end = this.minutes.length ? this.minutes[this.minutes.length - 1] : 0;
+    const { minutes } = this.timeline();
+    const end = minutes.length ? minutes[minutes.length - 1] : 0;
     return Math.min(Math.max(value, 0), end);
   }
 
@@ -116,8 +131,8 @@ export class RideChart {
     if (this.selection) {
       const from = Math.min(...this.selection);
       const to = Math.max(...this.selection);
-      const average = averagePower(power, searchLeft(this.minutes, from),
-                                   searchRight(this.minutes, to));
+      const { minutes } = this.timeline();
+      const average = averagePower(power, searchLeft(minutes, from), searchRight(minutes, to));
       markArea = selectionMarkArea(from, to, average);
     }
     this.chart.setOption({ series: [{ id: POWER_SERIES_ID, markArea }] }, { lazyUpdate: true });

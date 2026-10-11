@@ -1,7 +1,8 @@
-import { detectClimbs } from '../ride/climbs';
+import { Climb, detectClimbs, summarizeClimbs } from '../ride/climbs';
 import { DISPLAY_SMOOTHING_S, estimatePower } from '../ride/power';
 import { Ride } from '../ride/ride';
-import { buildChartOption } from './chart-option';
+import { movingMinutes } from '../ride/timeline';
+import { buildChartOption, ChartInput } from './chart-option';
 
 const POWER_SERIES = `Power on climbs, estimated (${DISPLAY_SMOOTHING_S} s avg)`;
 
@@ -19,6 +20,16 @@ function ride(): Ride {
   };
 }
 
+/** Chart input for a ride, with its power and climbs worked out as the app does. */
+function input(r: Ride, showHr: boolean, climbs: Climb[] = detectClimbs(r)): ChartInput {
+  const power = estimatePower(r, 90);
+  const summary = summarizeClimbs(r, climbs, power);
+  return {
+    ride: r, timeline: movingMinutes(r.seconds), power, title: 'ride.fit', showHr,
+    climbs: summary, riderKg: 75,
+  };
+}
+
 type Series = {
   name: string; yAxisIndex: number; markLine?: { data: unknown[] }; markArea?: { data: unknown[] };
 };
@@ -27,9 +38,7 @@ type Formatter = (params: { seriesName: string; data: [number, number | null] }[
 describe('buildChartOption', () => {
   it('puts power on a right-hand axis next to heart rate, and marks the pause', () => {
     const r = ride();
-    const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, climbs: detectClimbs(r), riderKg: 75,
-    });
+    const option = buildChartOption(input(r, true));
     const series = option['series'] as Series[];
     const yAxes = option['yAxis'] as { position?: string; show?: boolean }[];
     expect(series.map(s => s.name)).toEqual(['Heart rate', POWER_SERIES, 'Altitude']);
@@ -39,9 +48,7 @@ describe('buildChartOption', () => {
 
   it('gives power the left axis when shown alone', () => {
     const r = ride();
-    const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: false, climbs: detectClimbs(r), riderKg: 75,
-    });
+    const option = buildChartOption(input(r, false));
     const series = option['series'] as Series[];
     expect(series[0].name).toBe(POWER_SERIES);
     expect((option['yAxis'] as { position?: string }[])[0].position).toBe('left');
@@ -50,9 +57,7 @@ describe('buildChartOption', () => {
 
   it('reads out heart rate and power under the cursor, and nothing over a gap', () => {
     const r = ride();
-    const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, climbs: detectClimbs(r), riderKg: 75,
-    });
+    const option = buildChartOption(input(r, true));
     const format = (option['tooltip'] as { formatter: Formatter }).formatter;
     const html = format([
       { seriesName: 'Heart rate', data: [12.5, 141] },
@@ -71,9 +76,7 @@ describe('buildChartOption', () => {
 
   it('shades the climbs and reads out the one under the cursor', () => {
     const r = ride();
-    const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, climbs: detectClimbs(r), riderKg: 75,
-    });
+    const option = buildChartOption(input(r, true));
     const altitude = (option['series'] as Series[]).find(s => s.name === 'Altitude');
     expect(altitude?.markArea?.data.length).toBe(1);
     const [[start]] = altitude!.markArea!.data as [{ name: string }][];
@@ -90,10 +93,8 @@ describe('buildChartOption', () => {
     const climb = {
       from: 10, to: 20, lengthM: 60, gainM: 3, grade: 0.05, movingSeconds: 10, vamMPerH: 1080,
     };
-    const plotted = (climbs: (typeof climb)[]) => {
-      const option = buildChartOption({
-        ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, climbs, riderKg: 75,
-      });
+    const plotted = (climbs: Climb[]) => {
+      const option = buildChartOption(input(r, true, climbs));
       const series = (option['series'] as (Series & { data: [number, number | null][] })[])
         .find(s => s.name === POWER_SERIES);
       return series?.data.filter(([, y]) => y !== null).map(([x]) => x);

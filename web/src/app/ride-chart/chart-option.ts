@@ -1,10 +1,11 @@
 import type { EChartsCoreOption } from 'echarts/core';
 
+import { formatClimb, formatWatts, UNKNOWN } from '../climb-format';
 import { nanMax, nanMin } from '../ride/arrays';
-import { Climb, climbTotals, formatDuration } from '../ride/climbs';
-import { averagePower, DISPLAY_SMOOTHING_S, PowerEstimate } from '../ride/power';
+import { Climb, ClimbSummary } from '../ride/climbs';
+import { DISPLAY_SMOOTHING_S, PowerEstimate } from '../ride/power';
 import { Ride } from '../ride/ride';
-import { movingMinutes, withGaps } from '../ride/timeline';
+import { Timeline, withGaps } from '../ride/timeline';
 
 export const HR_COLOR = '#d6336c';
 export const POWER_COLOR = '#1c7ed6';
@@ -19,10 +20,11 @@ export const POWER_SERIES_ID = 'power';
 
 export interface ChartInput {
   ride: Ride;
+  timeline: Timeline; // movingMinutes() of the ride
   power: PowerEstimate | null;
   title: string;
   showHr: boolean;
-  climbs: Climb[];
+  climbs: ClimbSummary;
   riderKg: number; // for the climbs' W/kg
 }
 
@@ -32,14 +34,14 @@ interface TooltipParam {
 }
 
 /** Heart rate and/or estimated power; with only one, it gets the left axis alone. */
-export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }: ChartInput):
-    EChartsCoreOption {
+export function buildChartOption(input: ChartInput): EChartsCoreOption {
+  const { ride, power, title, showHr, riderKg } = input;
+  // Like the stats row, the averages and maxima cover the climbs only.
+  const { climbs, watts: climbWatts, totals } = input.climbs;
   const showPower = power !== null;
   // Pauses are cut out of the time axis and marked with a dotted line, never drawn as gaps.
-  const { minutes, pauseAt } = movingMinutes(ride.seconds);
+  const { minutes, pauseAt } = input.timeline;
   const xMax = minutes.length && minutes[minutes.length - 1] > 0 ? minutes[minutes.length - 1] : 1;
-  // Like the stats row, the averages and maxima cover the climbs only.
-  const totals = climbTotals(ride, climbs, power);
 
   const yAxes: Record<string, unknown>[] = [];
   const series: Record<string, unknown>[] = [];
@@ -77,7 +79,7 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
     // reliable; on flats and descents unknown drag, wind and braking swamp it.
     const onClimbs = new Float64Array(power.smoothed.length).fill(NaN);
     for (const c of climbs) onClimbs.set(power.smoothed.subarray(c.from, c.to + 1), c.from);
-    const max = nanMax(onClimbs);
+    const max = totals.powerMax;
     const name = `Power on climbs, estimated (${DISPLAY_SMOOTHING_S} s avg)`;
     yAxes.push({
       type: 'value', position: showHr ? 'right' : 'left', min: 0,
@@ -123,9 +125,9 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
           color: CLIMB_TEXT_COLOR, fontWeight: 600, fontSize: 12,
           backgroundColor: 'rgba(255, 255, 255, 0.85)', padding: [2, 5], borderRadius: 4,
         },
-        data: climbs.map(c => {
-          const watts = power ? averagePower(power, c.from, c.to) : NaN;
-          const name = Number.isFinite(watts) ? `${watts.toFixed(0)} W` : '';
+        data: climbs.map((c, k) => {
+          const watts = formatWatts(climbWatts[k]);
+          const name = watts === UNKNOWN ? '' : `${watts} W`;
           return [{ xAxis: minutes[c.from], name }, { xAxis: minutes[c.to] }];
         }),
       },
@@ -176,7 +178,7 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
         }
         if (!rows.length) return '';
         const k = climbs.findIndex(c => minutes[c.from] <= x && x <= minutes[c.to]);
-        if (k >= 0) rows.push(climbReadout(climbs[k], k, climbs.length, power, riderKg));
+        if (k >= 0) rows.push(climbReadout(climbs[k], climbWatts[k], k, climbs.length, riderKg));
         return `<div style="color:#666">${x.toFixed(1)} min</div>${rows.join('')}`;
       },
     },
@@ -196,16 +198,16 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
   };
 }
 
-function climbReadout(climb: Climb, index: number, count: number, power: PowerEstimate | null,
+function climbReadout(climb: Climb, watts: number, index: number, count: number,
                       riderKg: number): string {
+  const text = formatClimb(climb, watts, riderKg);
   const lines = [
-    `${climb.gainM.toFixed(0)} m over ${(climb.lengthM / 1000).toFixed(2)} km, ${(climb.grade * 100).toFixed(1)}%`,
-    `${formatDuration(climb.movingSeconds)} min, VAM ${climb.vamMPerH.toFixed(0)} m/h`,
+    `${text.gain} m over ${text.length} km, ${text.grade}%`,
+    `${text.time} min, VAM ${text.vam} m/h`,
   ];
-  const watts = power ? averagePower(power, climb.from, climb.to) : NaN;
-  if (Number.isFinite(watts)) {
-    const perKg = riderKg > 0 ? `, ${(watts / riderKg).toFixed(1)} W/kg` : '';
-    lines.push(`avg ${watts.toFixed(0)} W${perKg}`);
+  if (text.power !== UNKNOWN) {
+    const perKg = text.perKg === UNKNOWN ? '' : `, ${text.perKg} W/kg`;
+    lines.push(`avg ${text.power} W${perKg}`);
   }
   return `<div style="margin-top:6px;color:${CLIMB_TEXT_COLOR};font-weight:600">` +
          `Climb ${index + 1} of ${count}</div><div>${lines.join('</div><div>')}</div>`;

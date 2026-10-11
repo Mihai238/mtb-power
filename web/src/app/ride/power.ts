@@ -13,7 +13,7 @@
  */
 
 import { anyFinite, clip, diff, median, searchLeft, searchRight } from './arrays';
-import { Ride } from './ride';
+import { Ride, SEGMENT_GAP_S } from './ride';
 
 export const G = 9.80665;
 
@@ -47,25 +47,16 @@ export const OFFROAD_GRADE = 0.04;
 export const SURFACE_HALF_WINDOW_M = 100;
 export const DEFAULT_TEMPERATURE_C = 20.0;
 
-// Samples further apart than this belong to different segments (pause, dropout);
-// smoothing and acceleration never cross a segment boundary.
-export const SEGMENT_GAP_S = 10;
 export const SPEED_SMOOTHING_S = 5; // GPS speed jitter turns into fake acceleration spikes
 export const GRADE_HALF_WINDOW_M = 25; // grade measured over 50 m of distance
 export const MAX_GRADE = 0.35;
 export const STOPPED_SPEED = 0.5; // m/s; below this the rider is treated as standing still
 export const DISPLAY_SMOOTHING_S = 10; // 1-second estimates are too noisy to read directly
-export const NP_WINDOW_S = 30; // fixed by the definition of Normalized Power
 
 export interface PowerEstimate {
   watts: Float64Array; // per-sample estimate, NaN where speed/altitude are missing
   smoothed: Float64Array; // DISPLAY_SMOOTHING_S rolling average, for plotting
-  grade: Float64Array;
   durations: Float64Array; // seconds each sample stands for (pauses excluded)
-  normalized: number; // Normalized Power, see normalizedPower()
-  workJoules: number;
-  // Time-weighted over the moving segments, coasting counted as 0 W like a power meter.
-  average: number;
 }
 
 /** [start, end) index ranges of the parts of the ride without a gap longer than `maxGap`. */
@@ -175,10 +166,15 @@ export function acceleration(seconds: Float64Array, speed: Float64Array): Float6
   return accel;
 }
 
-/** Return null if the ride lacks the speed, distance or altitude data the model needs. */
+/** Whether the ride has the speed, distance and altitude data the power model needs. */
+export function hasPowerData(ride: Ride): boolean {
+  return [ride.speed, ride.distance, ride.altitude].every(anyFinite);
+}
+
+/** Return null if the ride lacks the data the model needs, see hasPowerData(). */
 export function estimatePower(ride: Ride, totalMassKg: number,
                               bike: BikeSetup = MTB): PowerEstimate | null {
-  if (![ride.speed, ride.distance, ride.altitude].every(anyFinite)) return null;
+  if (!hasPowerData(ride)) return null;
 
   const speed = rollingMean(ride.seconds, ride.speed, SPEED_SMOOTHING_S);
   const grade = gradeFromAltitude(ride.seconds, ride.distance, ride.altitude);
@@ -206,24 +202,17 @@ export function estimatePower(ride: Ride, totalMassKg: number,
     watts[i] = v < STOPPED_SPEED ? 0 : Math.max(w, 0);
   }
 
-  const smoothed = rollingMean(ride.seconds, watts, DISPLAY_SMOOTHING_S);
-  const durations = sampleDurations(ride.seconds);
-  let workJoules = 0;
-  let movingSeconds = 0;
-  for (let i = 0; i < watts.length; i++) {
-    if (Number.isFinite(watts[i])) {
-      workJoules += watts[i] * durations[i];
-      movingSeconds += durations[i];
-    }
-  }
   return {
-    watts, smoothed, grade, durations, workJoules,
-    average: workJoules / movingSeconds,
-    normalized: normalizedPower(ride.seconds, watts, durations),
+    watts,
+    smoothed: rollingMean(ride.seconds, watts, DISPLAY_SMOOTHING_S),
+    durations: sampleDurations(ride.seconds),
   };
 }
 
-/** Time-weighted average of samples [from, to), like PowerEstimate.average; NaN without data. */
+/**
+ * Time-weighted average of samples [from, to), with coasting counted as 0 W like a power
+ * meter; NaN without data.
+ */
 export function averagePower({ watts, durations }: PowerEstimate, from: number, to: number): number {
   let work = 0;
   let seconds = 0;
@@ -234,25 +223,6 @@ export function averagePower({ watts, durations }: PowerEstimate, from: number, 
     }
   }
   return seconds > 0 ? work / seconds : NaN;
-}
-
-/**
- * 4th root of the time-weighted mean of the 30 s rolling average to the 4th power, so
- * hard efforts count more than steady riding. Like the average, it covers moving
- * segments only, with coasting as 0 W.
- */
-export function normalizedPower(seconds: Float64Array, watts: Float64Array,
-                                durations: Float64Array): number {
-  const rolling = rollingMean(seconds, watts, NP_WINDOW_S);
-  let weighted = 0;
-  let total = 0;
-  for (let i = 0; i < rolling.length; i++) {
-    if (Number.isFinite(rolling[i])) {
-      weighted += rolling[i] ** 4 * durations[i];
-      total += durations[i];
-    }
-  }
-  return (weighted / total) ** 0.25;
 }
 
 /** Time until the next sample; across a pause, assume the typical recording interval. */

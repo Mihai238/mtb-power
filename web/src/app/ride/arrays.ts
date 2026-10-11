@@ -43,17 +43,6 @@ export function anyFinite(values: ArrayLike<number>): boolean {
   return false;
 }
 
-export function finiteValues(values: ArrayLike<number>): number[] {
-  const out: number[] = [];
-  for (let i = 0; i < values.length; i++) if (Number.isFinite(values[i])) out.push(values[i]);
-  return out;
-}
-
-export function nanMean(values: ArrayLike<number>): number {
-  const finite = finiteValues(values);
-  return finite.length ? finite.reduce((sum, v) => sum + v, 0) / finite.length : NaN;
-}
-
 export function nanMax(values: ArrayLike<number>): number {
   let max = NaN;
   for (let i = 0; i < values.length; i++) {

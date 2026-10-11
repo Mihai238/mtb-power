@@ -1,6 +1,6 @@
 import {
   acceleration, airDensity, averagePower, estimatePower, G, gradeFromAltitude, MAX_GRADE, MTB,
-  normalizedPower, rollingMean, sampleDurations, segmentBounds,
+  rollingMean, sampleDurations, segmentBounds,
 } from './power';
 import { Ride } from './ride';
 
@@ -92,20 +92,6 @@ describe('sampleDurations', () => {
   });
 });
 
-describe('normalizedPower', () => {
-  it('equals the power of a perfectly steady effort', () => {
-    const seconds = range(120);
-    const watts = new Float64Array(120).fill(200);
-    expect(normalizedPower(seconds, watts, sampleDurations(seconds))).toBeCloseTo(200, 9);
-  });
-
-  it('is above the average for a variable effort', () => {
-    const seconds = range(600);
-    const watts = seconds.map(t => (Math.floor(t / 60) % 2 ? 300 : 100));
-    expect(normalizedPower(seconds, watts, sampleDurations(seconds))).toBeGreaterThan(210);
-  });
-});
-
 describe('estimatePower', () => {
   it('returns null without altitude data', () => {
     const ride = steadyRide(60, 8);
@@ -121,8 +107,7 @@ describe('estimatePower', () => {
     const expected = (mass * G * MTB.crrFlat + 0.5 * rho * MTB.cdaM2 * v ** 2) * v
       / MTB.drivetrainEfficiency;
     expect(power.watts[60]).toBeCloseTo(expected, 9);
-    expect(power.average).toBeCloseTo(expected, 9);
-    expect(power.workJoules).toBeCloseTo(expected * 120, 6);
+    expect(averagePower(power, 0, 120)).toBeCloseTo(expected, 9);
   });
 
   it('adds the climbing work on a slope', () => {
@@ -144,11 +129,6 @@ describe('averagePower', () => {
     power.watts.set([100, 200, NaN, 300, 400]);
     power.durations.set([1, 1, 1, 2, 1]);
     expect(averagePower(power, 1, 5)).toBeCloseTo((200 + 300 * 2 + 400) / 4, 12);
-  });
-
-  it('matches the ride average over the whole ride', () => {
-    const power = estimatePower(steadyRide(60, 5, 0.05), 90)!;
-    expect(averagePower(power, 0, 60)).toBeCloseTo(power.average, 9);
   });
 
   it('is NaN for a slice without data', () => {
