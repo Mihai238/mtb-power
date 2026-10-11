@@ -78,17 +78,22 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
 
   if (power) {
     const index = yAxes.length;
-    const max = nanMax(power.smoothed);
-    const name = `Power, estimated (${DISPLAY_SMOOTHING_S} s avg)`;
+    // Only climbs are plotted: there, lifting rider and bike dominates and the estimate is
+    // reliable; on flats and descents unknown drag, wind and braking swamp it.
+    const onClimbs = new Float64Array(power.smoothed.length).fill(NaN);
+    for (const c of climbs) onClimbs.set(power.smoothed.subarray(c.from, c.to + 1), c.from);
+    const max = nanMax(onClimbs);
+    const name = `Power on climbs, estimated (${DISPLAY_SMOOTHING_S} s avg)`;
     yAxes.push({
-      type: 'value', position: showHr ? 'right' : 'left', min: 0, max: max * 1.1,
+      type: 'value', position: showHr ? 'right' : 'left', min: 0,
+      max: Number.isFinite(max) ? max * 1.1 : undefined,
       name: 'Power, estimated (W)', nameLocation: 'middle', nameGap: 40,
       axisLabel: { showMaxLabel: false },
       splitLine: showHr ? { show: false } : { lineStyle: { color: GRID_COLOR } },
     });
     series.push({
       ...dataLine, id: POWER_SERIES_ID, name, yAxisIndex: index, z: 2,
-      data: withGaps(minutes, power.smoothed),
+      data: withGaps(minutes, onClimbs),
       lineStyle: { color: POWER_COLOR, width: 1.2, opacity: showHr ? 0.85 : 1 },
       itemStyle: { color: POWER_COLOR, borderColor: '#fff', borderWidth: 1.5 },
     });
@@ -100,7 +105,7 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
       const avgName = `avg ${power.average.toFixed(0)} W`;
       series.push(averageLine(avgName, power.average, index));
       legend.push(name, avgName);
-      titleParts.push(`max ${max.toFixed(0)} W`);
+      if (Number.isFinite(max)) titleParts.push(`max on climbs ${max.toFixed(0)} W`);
     }
   }
 

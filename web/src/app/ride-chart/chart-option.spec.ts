@@ -3,7 +3,7 @@ import { DISPLAY_SMOOTHING_S, estimatePower } from '../ride/power';
 import { Ride } from '../ride/ride';
 import { buildChartOption } from './chart-option';
 
-const POWER_SERIES = `Power, estimated (${DISPLAY_SMOOTHING_S} s avg)`;
+const POWER_SERIES = `Power on climbs, estimated (${DISPLAY_SMOOTHING_S} s avg)`;
 
 const f64 = (values: number[]) => Float64Array.from(values);
 
@@ -83,5 +83,22 @@ describe('buildChartOption', () => {
     expect(html).toContain('Climb 1 of 1');
     expect(html).toMatch(/\d+ m over 0\.\d\d km, 5\.0%/);
     expect(html).toMatch(/avg \d+ W, \d\.\d W\/kg/);
+  });
+
+  it('plots power only on climbs', () => {
+    const r = ride();
+    const climb = {
+      from: 10, to: 20, lengthM: 60, gainM: 3, grade: 0.05, movingSeconds: 10, vamMPerH: 1080,
+    };
+    const plotted = (climbs: (typeof climb)[]) => {
+      const option = buildChartOption({
+        ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, climbs, riderKg: 75,
+      });
+      const series = (option['series'] as (Series & { data: [number, number | null][] })[])
+        .find(s => s.name === POWER_SERIES);
+      return series?.data.filter(([, y]) => y !== null).map(([x]) => x);
+    };
+    expect(plotted([])).toEqual([]);
+    expect(plotted([climb])).toEqual(Array.from({ length: 11 }, (_, i) => (10 + i) / 60));
   });
 });
