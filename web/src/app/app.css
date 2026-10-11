@@ -69,8 +69,7 @@ header p {
   align-items: flex-end;
 }
 
-.settings > label,
-.segmented {
+.settings > label {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -95,51 +94,6 @@ header p {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: #fff;
-}
-
-.segmented {
-  flex-direction: row;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.segmented legend {
-  margin-bottom: 4px;
-  padding: 0;
-}
-
-.segmented label span {
-  display: block;
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  margin-left: -1px;
-  color: var(--text);
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.segmented label:first-of-type span {
-  border-radius: 6px 0 0 6px;
-}
-
-.segmented label:last-of-type span {
-  border-radius: 0 6px 6px 0;
-}
-
-.segmented input {
-  position: absolute;
-  opacity: 0;
-}
-
-.segmented input:checked + span {
-  background: var(--surface);
-  font-weight: 600;
-}
-
-.segmented input:focus-visible + span {
-  outline: 2px solid var(--accent);
 }
 
 .message {

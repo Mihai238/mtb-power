@@ -1,7 +1,7 @@
 import type { EChartsCoreOption } from 'echarts/core';
 
-import { nanMax, nanMean, nanMin } from '../ride/arrays';
-import { Climb, formatDuration } from '../ride/climbs';
+import { nanMax, nanMin } from '../ride/arrays';
+import { Climb, climbTotals, formatDuration } from '../ride/climbs';
 import { averagePower, DISPLAY_SMOOTHING_S, PowerEstimate } from '../ride/power';
 import { Ride } from '../ride/ride';
 import { movingMinutes, withGaps } from '../ride/timeline';
@@ -9,7 +9,6 @@ import { movingMinutes, withGaps } from '../ride/timeline';
 export const HR_COLOR = '#d6336c';
 export const POWER_COLOR = '#1c7ed6';
 const ALTITUDE_COLOR = '#e0e0e0';
-const AVERAGE_COLOR = '#666';
 const PAUSE_COLOR = '#999';
 const GRID_COLOR = '#e6e6e6';
 const SELECTION_COLOR = 'rgba(28, 126, 214, 0.12)';
@@ -39,7 +38,8 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
   // Pauses are cut out of the time axis and marked with a dotted line, never drawn as gaps.
   const { minutes, pauseAt } = movingMinutes(ride.seconds);
   const xMax = minutes.length && minutes[minutes.length - 1] > 0 ? minutes[minutes.length - 1] : 1;
-  const flat = (y: number) => [[0, y], [xMax, y]];
+  // Like the stats row, the averages and maxima cover the climbs only.
+  const totals = climbTotals(ride, climbs, power);
 
   const yAxes: Record<string, unknown>[] = [];
   const series: Record<string, unknown>[] = [];
@@ -52,14 +52,8 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
     connectNulls: false, animation: false,
     emphasis: { disabled: true },
   };
-  const averageLine = (name: string, y: number, yAxisIndex: number) => ({
-    type: 'line', name, data: flat(y), yAxisIndex, symbol: 'none', silent: true,
-    lineStyle: { color: AVERAGE_COLOR, width: 1, type: 'dashed' },
-    itemStyle: { color: AVERAGE_COLOR }, z: 4, animation: false, emphasis: { disabled: true },
-  });
 
   if (showHr) {
-    const avg = nanMean(ride.heartRate);
     yAxes.push({
       type: 'value', position: 'left', scale: true, name: 'Heart rate (bpm)',
       nameLocation: 'middle', nameGap: 40, splitLine: { lineStyle: { color: GRID_COLOR } },
@@ -70,10 +64,11 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
       lineStyle: { color: HR_COLOR, width: 1.2 },
       itemStyle: { color: HR_COLOR, borderColor: '#fff', borderWidth: 1.5 },
     });
-    series.push(averageLine(`avg HR ${avg.toFixed(0)} bpm`, avg, 0));
-    legend.push('Heart rate', `avg HR ${avg.toFixed(0)} bpm`);
+    legend.push('Heart rate');
     readouts.set('Heart rate', { label: 'Heart rate', unit: 'bpm', color: HR_COLOR });
-    titleParts.push(`max ${nanMax(ride.heartRate).toFixed(0)} bpm`);
+    if (Number.isFinite(totals.heartRateMax)) {
+      titleParts.push(`max HR on climbs ${totals.heartRateMax.toFixed(0)} bpm`);
+    }
   }
 
   if (power) {
@@ -98,14 +93,10 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
       itemStyle: { color: POWER_COLOR, borderColor: '#fff', borderWidth: 1.5 },
     });
     readouts.set(name, { label: 'Power', unit: 'W', color: POWER_COLOR });
-    titleParts.push(`est. avg ${power.average.toFixed(0)} W`, `NP ${power.normalized.toFixed(0)} W`);
-    if (showHr) {
-      legend.splice(1, 0, name);
-    } else {
-      const avgName = `avg ${power.average.toFixed(0)} W`;
-      series.push(averageLine(avgName, power.average, index));
-      legend.push(name, avgName);
-      if (Number.isFinite(max)) titleParts.push(`max on climbs ${max.toFixed(0)} W`);
+    legend.push(name);
+    if (Number.isFinite(totals.powerAvg)) {
+      titleParts.push(`est. avg on climbs ${totals.powerAvg.toFixed(0)} W`);
+      if (!showHr) titleParts.push(`max on climbs ${max.toFixed(0)} W`);
     }
   }
 

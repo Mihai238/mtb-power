@@ -32,21 +32,19 @@ describe('buildChartOption', () => {
     });
     const series = option['series'] as Series[];
     const yAxes = option['yAxis'] as { position?: string; show?: boolean }[];
-    expect(series.map(s => s.name)).toEqual([
-      'Heart rate', expect.stringMatching(/^avg HR \d+ bpm$/), POWER_SERIES, 'Altitude',
-    ]);
+    expect(series.map(s => s.name)).toEqual(['Heart rate', POWER_SERIES, 'Altitude']);
     expect(yAxes.map(a => a.position)).toEqual(['left', 'right', undefined]);
     expect(series[0].markLine?.data.length).toBe(1);
   });
 
-  it('gives power the left axis and its own average line when shown alone', () => {
+  it('gives power the left axis when shown alone', () => {
     const r = ride();
     const option = buildChartOption({
       ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: false, climbs: detectClimbs(r), riderKg: 75,
     });
     const series = option['series'] as Series[];
     expect(series[0].name).toBe(POWER_SERIES);
-    expect(series[1].name).toMatch(/^avg \d+ W$/);
+    expect((option['yAxis'] as { position?: string }[])[0].position).toBe('left');
     expect(series[0].markLine?.data.length).toBe(1);
   });
 

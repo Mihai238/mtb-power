@@ -44,4 +44,16 @@ describe('App', () => {
     expect(cells.slice(0, 5)).toEqual(['1', expect.any(String), expect.any(String), '148', '6.0']);
     expect(Number(cells[7])).toBeGreaterThan(0);
   });
+
+  it('shows stats for the climbs only', async () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.componentInstance['loaded'].set({ fileName: 'climb.fit', ride: climbingRide() });
+    await fixture.whenStable();
+    const labels = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.stats dt'), dt => dt.textContent);
+    expect(labels).toEqual([
+      'Climbing', 'Avg HR on climbs', 'Max HR on climbs', 'Avg power on climbs',
+      'Max power on climbs (10 s)', 'Work on climbs',
+    ]);
+  });
 });

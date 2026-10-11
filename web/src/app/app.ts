@@ -1,13 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 
 import { RideChart } from './ride-chart/ride-chart';
-import { finiteValues, nanMax } from './ride/arrays';
-import { detectClimbs, formatDuration } from './ride/climbs';
+import { climbTotals, detectClimbs, formatDuration } from './ride/climbs';
 import { averagePower, DISPLAY_SMOOTHING_S, estimatePower, PowerEstimate } from './ride/power';
 import { hasHeartRate, Ride } from './ride/ride';
 import { movingMinutes } from './ride/timeline';
-
-export type Show = 'both' | 'hr' | 'power';
 
 // Shown until the rider opens a file of their own. Relative, so it resolves against the base href.
 const DEMO_FILE = 'demo-ride.fit';
@@ -47,11 +44,6 @@ interface ClimbRow {
 })
 export class App {
   protected readonly smoothingS = DISPLAY_SMOOTHING_S;
-  protected readonly showOptions: { value: Show; label: string }[] = [
-    { value: 'both', label: 'Both' },
-    { value: 'hr', label: 'Heart rate' },
-    { value: 'power', label: 'Power' },
-  ];
 
   protected readonly loaded = signal<Loaded | null>(null);
   protected readonly loadError = signal<string | null>(null);
@@ -60,7 +52,6 @@ export class App {
   protected readonly riderWeight = signal(80);
   protected readonly bikeWeight = signal(12);
   protected readonly gearWeight = signal(3);
-  protected readonly show = signal<Show>('both');
 
   protected readonly totalMass = computed(() => this.riderWeight() + this.bikeWeight() + this.gearWeight());
 
@@ -95,7 +86,6 @@ export class App {
     const loaded = this.loaded();
     if (!loaded) return null;
     const { ride } = loaded;
-    const show = this.show();
     const view: View = { showHr: false, power: null, notices: [], error: null, stats: [] };
 
     if (ride.seconds.length === 0) {
@@ -103,47 +93,48 @@ export class App {
       return view;
     }
 
-    let showHr = show !== 'power';
-    if (showHr && !hasHeartRate(ride)) {
-      if (show === 'hr') {
-        view.error = 'No heart rate data in this file.';
-        return view;
-      }
-      view.notices.push('No heart rate data in this file.');
-      showHr = false;
-    } else if (showHr) {
-      const hr = finiteValues(ride.heartRate);
-      const avg = hr.reduce((sum, v) => sum + v, 0) / hr.length;
-      view.stats.push(
-        { label: 'Avg heart rate', value: avg.toFixed(0), unit: 'bpm' },
-        { label: 'Max heart rate', value: nanMax(ride.heartRate).toFixed(0), unit: 'bpm' },
-      );
-    }
+    const showHr = hasHeartRate(ride);
+    if (!showHr) view.notices.push('No heart rate data in this file.');
 
-    if (show !== 'hr') {
-      const mass = this.totalMass();
-      if (!(mass > 0)) {
-        view.error = 'Enter rider and bike weights to estimate power.';
+    const mass = this.totalMass();
+    if (!(mass > 0)) {
+      view.error = 'Enter rider and bike weights to estimate power.';
+      return view;
+    }
+    const power = estimatePower(ride, mass);
+    if (!power) {
+      if (!showHr) {
+        view.error = "No speed/altitude data in this file, so power can't be estimated.";
         return view;
       }
-      const power = estimatePower(ride, mass);
-      if (!power) {
-        if (!showHr) {
-          view.error = "No speed/altitude data in this file, so power can't be estimated.";
-          return view;
-        }
-        view.notices.push("No speed/altitude data in this file, so power can't be estimated.");
-      } else {
-        view.power = power;
-        view.stats.push(
-          { label: 'Avg power', value: power.average.toFixed(0), unit: 'W' },
-          { label: 'Normalized power', value: power.normalized.toFixed(0), unit: 'W' },
-          { label: `Max power (${DISPLAY_SMOOTHING_S} s)`, value: nanMax(power.smoothed).toFixed(0), unit: 'W' },
-          { label: 'Work', value: (power.workJoules / 1000).toFixed(0), unit: 'kJ' },
-        );
-      }
+      view.notices.push("No speed/altitude data in this file, so power can't be estimated.");
+    } else {
+      view.power = power;
     }
     view.showHr = showHr;
+
+    // Stats cover the climbs only: that's where the power estimate holds up.
+    const climbs = this.climbs();
+    if (!climbs.length) {
+      view.notices.push('No climbs in this ride, so there are no stats.');
+      return view;
+    }
+    const totals = climbTotals(ride, climbs, view.power);
+    const stat = (label: string, value: number, digits: number, unit: string) => {
+      if (Number.isFinite(value)) view.stats.push({ label, value: value.toFixed(digits), unit });
+    };
+    stat('Climbing', totals.movingSeconds / 60, 0, 'min');
+    if (showHr) {
+      stat('Avg HR on climbs', totals.heartRateAvg, 0, 'bpm');
+      stat('Max HR on climbs', totals.heartRateMax, 0, 'bpm');
+    }
+    if (view.power) {
+      const riderKg = this.riderWeight();
+      const perKg = riderKg > 0 ? ` (${(totals.powerAvg / riderKg).toFixed(1)} W/kg)` : '';
+      stat('Avg power on climbs', totals.powerAvg, 0, `W${perKg}`);
+      stat(`Max power on climbs (${DISPLAY_SMOOTHING_S} s)`, totals.powerMax, 0, 'W');
+      stat('Work on climbs', totals.workJoules / 1000, 0, 'kJ');
+    }
     return view;
   });
 
@@ -199,9 +190,5 @@ export class App {
 
   protected numberFrom(event: Event): number {
     return (event.target as HTMLInputElement).valueAsNumber;
-  }
-
-  protected valueFrom<T extends string>(event: Event): T {
-    return (event.target as HTMLSelectElement | HTMLInputElement).value as T;
   }
 }

@@ -6,7 +6,7 @@
  * getting any higher, so short dips and brief flat bits stay part of the climb.
  */
 
-import { sampleDurations, segmentBounds } from './power';
+import { PowerEstimate, sampleDurations, segmentBounds } from './power';
 import { Ride } from './ride';
 
 export const CLIMB_END_DROP_M = 5;
@@ -101,6 +101,54 @@ export function detectClimbs(ride: Ride): Climb[] {
   const last = measure(low, high);
   if (last) climbs.push(last);
   return climbs;
+}
+
+/** All the climbs taken together; NaN where there's no data, e.g. without any climbs. */
+export interface ClimbTotals {
+  movingSeconds: number;
+  heartRateAvg: number;
+  heartRateMax: number;
+  powerAvg: number; // time-weighted, like PowerEstimate.average
+  powerMax: number; // of the display-smoothed power
+  workJoules: number;
+}
+
+export function climbTotals(ride: Ride, climbs: Climb[], power: PowerEstimate | null): ClimbTotals {
+  let movingSeconds = 0;
+  let hrSum = 0;
+  let hrCount = 0;
+  let heartRateMax = NaN;
+  let workJoules = 0;
+  let poweredSeconds = 0;
+  let powerMax = NaN;
+  for (const { from, to, movingSeconds: seconds } of climbs) {
+    movingSeconds += seconds;
+    for (let i = from; i <= to; i++) {
+      const hr = ride.heartRate[i];
+      if (Number.isFinite(hr) && !(hr <= heartRateMax)) heartRateMax = hr;
+      const smoothed = power?.smoothed[i] ?? NaN;
+      if (Number.isFinite(smoothed) && !(smoothed <= powerMax)) powerMax = smoothed;
+      // Sums cover [from, to), like Climb.movingSeconds.
+      if (i === to) continue;
+      if (Number.isFinite(hr)) {
+        hrSum += hr;
+        hrCount++;
+      }
+      const watts = power?.watts[i] ?? NaN;
+      if (Number.isFinite(watts)) {
+        workJoules += watts * power!.durations[i];
+        poweredSeconds += power!.durations[i];
+      }
+    }
+  }
+  return {
+    movingSeconds,
+    heartRateAvg: hrCount ? hrSum / hrCount : NaN,
+    heartRateMax,
+    powerAvg: poweredSeconds ? workJoules / poweredSeconds : NaN,
+    powerMax,
+    workJoules: poweredSeconds ? workJoules : NaN,
+  };
 }
 
 /** m:ss, e.g. 11:07. */

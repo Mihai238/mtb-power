@@ -34,16 +34,6 @@
                  (input)="gearWeight.set(numberFrom($event))"> kg
         </span>
       </label>
-      <fieldset class="segmented">
-        <legend>Show</legend>
-        @for (option of showOptions; track option.value) {
-          <label>
-            <input type="radio" name="show" [value]="option.value" [checked]="show() === option.value"
-                   (change)="show.set(valueFrom($event))">
-            <span>{{ option.label }}</span>
-          </label>
-        }
-      </fieldset>
     </div>
   </section>
 

@@ -1,4 +1,5 @@
-import { detectClimbs } from './climbs';
+import { climbTotals, detectClimbs } from './climbs';
+import { averagePower, estimatePower } from './power';
 import { Ride } from './ride';
 
 const SPEED = 5; // m/s, one sample per second
@@ -89,5 +90,35 @@ describe('detectClimbs', () => {
     const ride = profileRide([[0, 100], [500, 140]]);
     ride.altitude.fill(NaN);
     expect(detectClimbs(ride)).toEqual([]);
+  });
+});
+
+describe('climbTotals', () => {
+  it('covers the climbs only', () => {
+    const ride = profileRide([[0, 100], [500, 100], [1500, 160], [2500, 160], [3000, 190]]);
+    // Easy on the flat between the climbs, harder on them.
+    ride.heartRate = ride.distance.map(d => (d < 500 || (d > 1500 && d < 2500) ? 110 : 150));
+    const climbs = detectClimbs(ride);
+    const power = estimatePower(ride, 90)!;
+    const totals = climbTotals(ride, climbs, power);
+    expect(climbs.length).toBe(2);
+    expect(totals.movingSeconds).toBe(climbs[0].movingSeconds + climbs[1].movingSeconds);
+    expect(totals.heartRateAvg).toBe(150);
+    expect(totals.heartRateMax).toBe(150);
+    expect(totals.workJoules).toBeCloseTo(totals.powerAvg * totals.movingSeconds);
+    const [first, second] = climbs.map(c => averagePower(power, c.from, c.to) * c.movingSeconds);
+    expect(totals.workJoules).toBeCloseTo(first + second);
+  });
+
+  it('is NaN without climbs or power', () => {
+    const ride = profileRide([[0, 100], [500, 100]]);
+    expect(climbTotals(ride, [], estimatePower(ride, 90))).toEqual({
+      movingSeconds: 0, heartRateAvg: NaN, heartRateMax: NaN, powerAvg: NaN, powerMax: NaN,
+      workJoules: NaN,
+    });
+    const climbing = profileRide([[0, 100], [500, 140]]);
+    const totals = climbTotals(climbing, detectClimbs(climbing), null);
+    expect(totals.movingSeconds).toBeGreaterThan(0);
+    expect(totals.powerAvg).toBeNaN();
   });
 });
