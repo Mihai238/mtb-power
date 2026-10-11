@@ -18,14 +18,16 @@ function ride(): Ride {
   };
 }
 
-type Series = { name: string; yAxisIndex: number; markLine?: { data: unknown[] } };
+type Series = {
+  name: string; yAxisIndex: number; markLine?: { data: unknown[] }; markArea?: { data: unknown[] };
+};
 type Formatter = (params: { seriesName: string; data: [number, number | null] }[]) => string;
 
 describe('buildChartOption', () => {
   it('puts power on a right-hand axis next to heart rate, and marks the pause', () => {
     const r = ride();
     const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true,
+      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, riderKg: 75,
     });
     const series = option['series'] as Series[];
     const yAxes = option['yAxis'] as { position?: string; show?: boolean }[];
@@ -39,7 +41,7 @@ describe('buildChartOption', () => {
   it('gives power the left axis and its own average line when shown alone', () => {
     const r = ride();
     const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: false,
+      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: false, riderKg: 75,
     });
     const series = option['series'] as Series[];
     expect(series[0].name).toBe(POWER_SERIES);
@@ -50,7 +52,7 @@ describe('buildChartOption', () => {
   it('reads out heart rate and power under the cursor, and nothing over a gap', () => {
     const r = ride();
     const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true,
+      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, riderKg: 75,
     });
     const format = (option['tooltip'] as { formatter: Formatter }).formatter;
     const html = format([
@@ -66,5 +68,19 @@ describe('buildChartOption', () => {
       { seriesName: 'Heart rate', data: [5, null] },
       { seriesName: POWER_SERIES, data: [5, null] },
     ])).toBe('');
+  });
+
+  it('shades the climbs and reads out the one under the cursor', () => {
+    const r = ride();
+    const option = buildChartOption({
+      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, riderKg: 75,
+    });
+    const altitude = (option['series'] as Series[]).find(s => s.name === 'Altitude');
+    expect(altitude?.markArea?.data.length).toBe(1);
+    const format = (option['tooltip'] as { formatter: Formatter }).formatter;
+    const html = format([{ seriesName: POWER_SERIES, data: [0.5, 187.4] }]);
+    expect(html).toContain('Climb 1 of 1');
+    expect(html).toMatch(/\d+ m over 0\.\d\d km, 5\.0%/);
+    expect(html).toMatch(/avg \d+ W, \d\.\d W\/kg/);
   });
 });

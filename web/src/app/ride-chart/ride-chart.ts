@@ -41,6 +41,7 @@ export class RideChart {
   readonly power = input<PowerEstimate | null>(null);
   readonly title = input('');
   readonly showHr = input(true);
+  readonly riderKg = input(0);
 
   private readonly container = viewChild.required<ElementRef<HTMLDivElement>>('chart');
   private readonly destroyRef = inject(DestroyRef);
@@ -55,6 +56,7 @@ export class RideChart {
       const ride = this.ride();
       const option = buildChartOption({
         ride, power: this.power(), title: this.title(), showHr: this.showHr(),
+        riderKg: this.riderKg(),
       });
       this.minutes = movingMinutes(ride.seconds).minutes;
       if (!this.chart) this.chart = this.init(this.container().nativeElement);
