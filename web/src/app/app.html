@@ -21,10 +21,17 @@
         </span>
       </label>
       <label>
-        Bike + gear
+        Bike
         <span class="unit-input">
           <input type="number" min="0" step="0.5" [value]="bikeWeight()"
                  (input)="bikeWeight.set(numberFrom($event))"> kg
+        </span>
+      </label>
+      <label>
+        Gear
+        <span class="unit-input">
+          <input type="number" min="0" step="0.5" [value]="gearWeight()"
+                 (input)="gearWeight.set(numberFrom($event))"> kg
         </span>
       </label>
       <fieldset class="segmented">
@@ -61,7 +68,7 @@
       </dl>
       @if (view.power) {
         <p class="note">
-          Power is estimated from speed and elevation for a mountain bike and {{ totalMass() }} kg rider + bike,
+          Power is estimated from speed and elevation for a mountain bike and {{ totalMass() }} kg rider + bike + gear,
           shown as a {{ smoothingS }} s average.
         </p>
       }

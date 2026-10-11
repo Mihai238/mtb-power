@@ -42,9 +42,10 @@ export class App {
 
   protected readonly riderWeight = signal(80);
   protected readonly bikeWeight = signal(12);
+  protected readonly gearWeight = signal(3);
   protected readonly show = signal<Show>('both');
 
-  protected readonly totalMass = computed(() => this.riderWeight() + this.bikeWeight());
+  protected readonly totalMass = computed(() => this.riderWeight() + this.bikeWeight() + this.gearWeight());
 
   protected readonly view = computed<View | null>(() => {
     const loaded = this.loaded();
