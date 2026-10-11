@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "cycling-power": {
+    "mtb-power": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -59,10 +59,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "cycling-power:build:production"
+              "buildTarget": "mtb-power:build:production"
             },
             "development": {
-              "buildTarget": "cycling-power:build:development"
+              "buildTarget": "mtb-power:build:development"
             }
           },
           "defaultConfiguration": "development"

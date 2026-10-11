@@ -1,4 +1,4 @@
-# Cycling power
+# MTB power
 
 Open a `.fit` mountain bike ride and see heart rate and estimated power, with the elevation
 profile behind them. Pauses are cut out of the time axis and marked with a dotted line.
@@ -17,7 +17,7 @@ Use `npx ng` rather than a global `ng`, so the project's Angular CLI version is 
 
 ```bash
 npx ng test --watch=false
-npx ng build        # static files in dist/cycling-power/browser
+npx ng build        # static files in dist/mtb-power/browser
 ```
 
 The build output is plain static files and can be hosted anywhere (e.g. GitHub Pages).

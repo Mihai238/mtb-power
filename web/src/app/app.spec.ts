@@ -12,7 +12,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Cycling power');
+    expect(compiled.querySelector('h1')?.textContent).toContain('MTB power');
     expect(compiled.querySelector('.empty')?.textContent).toContain('Open a .fit file');
   });
 });

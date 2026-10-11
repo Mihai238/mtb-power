@@ -1,4 +1,4 @@
-# cycling-power
+# mtb-power
 
 ## Tickets
 
