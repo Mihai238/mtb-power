@@ -7,6 +7,9 @@ import { hasHeartRate, Ride } from './ride/ride';
 
 export type Show = 'both' | 'hr' | 'power';
 
+// Shown until the rider opens a file of their own. Relative, so it resolves against the base href.
+const DEMO_FILE = 'demo-ride.fit';
+
 interface Loaded {
   fileName: string;
   ride: Ride;
@@ -103,6 +106,10 @@ export class App {
     return view;
   });
 
+  constructor() {
+    void this.openDemo();
+  }
+
   protected async open(file: File | undefined): Promise<void> {
     if (!file) return;
     try {
@@ -114,6 +121,20 @@ export class App {
     } catch (error) {
       this.loaded.set(null);
       this.loadError.set(`Could not read ${file.name}: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  private async openDemo(): Promise<void> {
+    try {
+      const response = await fetch(DEMO_FILE);
+      if (!response.ok) return;
+      const bytes = await response.arrayBuffer();
+      const { loadRide } = await import('./ride/fit-file');
+      // The rider may have opened a file of their own in the meantime.
+      if (this.loaded() || this.loadError()) return;
+      this.loaded.set({ fileName: DEMO_FILE, ride: loadRide(bytes) });
+    } catch {
+      // Without the demo the page just asks for a file.
     }
   }
 
