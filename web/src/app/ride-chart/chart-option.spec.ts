@@ -76,6 +76,8 @@ describe('buildChartOption', () => {
     });
     const altitude = (option['series'] as Series[]).find(s => s.name === 'Altitude');
     expect(altitude?.markArea?.data.length).toBe(1);
+    const [[start]] = altitude!.markArea!.data as [{ name: string }][];
+    expect(start.name).toMatch(/^\d+ W$/);
     const format = (option['tooltip'] as { formatter: Formatter }).formatter;
     const html = format([{ seriesName: POWER_SERIES, data: [0.5, 187.4] }]);
     expect(html).toContain('Climb 1 of 1');

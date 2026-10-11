@@ -117,7 +117,17 @@ export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }
       lineStyle: { width: 0 }, areaStyle: { color: ALTITUDE_COLOR, opacity: 1, origin: 'start' },
       markArea: {
         silent: true, animation: false, itemStyle: { color: CLIMB_COLOR },
-        data: climbs.map(c => [{ xAxis: minutes[c.from] }, { xAxis: minutes[c.to] }]),
+        // Each climb's average power, always on show at the top of its band.
+        label: {
+          show: power !== null, position: 'insideTop', distance: 6,
+          color: CLIMB_TEXT_COLOR, fontWeight: 600, fontSize: 12,
+          backgroundColor: 'rgba(255, 255, 255, 0.85)', padding: [2, 5], borderRadius: 4,
+        },
+        data: climbs.map(c => {
+          const watts = power ? averagePower(power, c.from, c.to) : NaN;
+          const name = Number.isFinite(watts) ? `${watts.toFixed(0)} W` : '';
+          return [{ xAxis: minutes[c.from], name }, { xAxis: minutes[c.to] }];
+        }),
       },
     });
   }
@@ -208,7 +218,8 @@ export function selectionMarkArea(from: number, to: number, averageW: number):
     silent: true, animation: false,
     itemStyle: { color: SELECTION_COLOR },
     label: {
-      show: Number.isFinite(averageW), position: 'insideTop', distance: 8,
+      // Below the row of climb labels.
+      show: Number.isFinite(averageW), position: 'insideTop', distance: 32,
       formatter: `avg ${averageW.toFixed(0)} W`,
       color: POWER_COLOR, fontWeight: 600, fontSize: 13,
       backgroundColor: 'rgba(255, 255, 255, 0.85)', padding: [3, 6], borderRadius: 4,
