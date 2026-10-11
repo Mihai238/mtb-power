@@ -2,8 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/c
 
 import { RideChart } from './ride-chart/ride-chart';
 import { finiteValues, nanMax } from './ride/arrays';
-import { DISPLAY_SMOOTHING_S, estimatePower, PowerEstimate } from './ride/power';
+import { detectClimbs, formatDuration } from './ride/climbs';
+import { averagePower, DISPLAY_SMOOTHING_S, estimatePower, PowerEstimate } from './ride/power';
 import { hasHeartRate, Ride } from './ride/ride';
+import { movingMinutes } from './ride/timeline';
 
 export type Show = 'both' | 'hr' | 'power';
 
@@ -22,6 +24,18 @@ interface View {
   notices: string[];
   error: string | null;
   stats: { label: string; value: string; unit: string }[];
+}
+
+/** One row of the climbs table, formatted; '–' where a value is unknown. */
+interface ClimbRow {
+  start: string;
+  length: string;
+  gain: string;
+  grade: string;
+  time: string;
+  vam: string;
+  power: string;
+  perKg: string;
 }
 
 @Component({
@@ -49,6 +63,33 @@ export class App {
   protected readonly show = signal<Show>('both');
 
   protected readonly totalMass = computed(() => this.riderWeight() + this.bikeWeight() + this.gearWeight());
+
+  // Climbs depend on the ride alone, so they're found once per file, not on every setting change.
+  protected readonly climbs = computed(() => {
+    const loaded = this.loaded();
+    return loaded ? detectClimbs(loaded.ride) : [];
+  });
+
+  protected readonly climbRows = computed<ClimbRow[]>(() => {
+    const loaded = this.loaded();
+    if (!loaded) return [];
+    const power = this.view()?.power ?? null;
+    const riderKg = this.riderWeight();
+    const { minutes } = movingMinutes(loaded.ride.seconds);
+    return this.climbs().map(climb => {
+      const watts = power ? averagePower(power, climb.from, climb.to) : NaN;
+      return {
+        start: minutes[climb.from].toFixed(1),
+        length: (climb.lengthM / 1000).toFixed(2),
+        gain: climb.gainM.toFixed(0),
+        grade: (climb.grade * 100).toFixed(1),
+        time: formatDuration(climb.movingSeconds),
+        vam: climb.vamMPerH.toFixed(0),
+        power: Number.isFinite(watts) ? watts.toFixed(0) : '–',
+        perKg: Number.isFinite(watts) && riderKg > 0 ? (watts / riderKg).toFixed(1) : '–',
+      };
+    });
+  });
 
   protected readonly view = computed<View | null>(() => {
     const loaded = this.loaded();

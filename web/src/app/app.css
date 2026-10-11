@@ -199,3 +199,41 @@ header p {
   border-radius: 8px;
   color: var(--muted);
 }
+
+.climbs {
+  margin-top: 16px;
+}
+
+.climbs summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.climbs table {
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.climbs th,
+.climbs td {
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.climbs th {
+  vertical-align: bottom;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.climbs th span {
+  display: block;
+}

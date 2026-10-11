@@ -11,6 +11,7 @@ import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 
 import { searchLeft, searchRight } from '../ride/arrays';
+import { Climb } from '../ride/climbs';
 import { averagePower, PowerEstimate } from '../ride/power';
 import { Ride } from '../ride/ride';
 import { movingMinutes } from '../ride/timeline';
@@ -41,6 +42,7 @@ export class RideChart {
   readonly power = input<PowerEstimate | null>(null);
   readonly title = input('');
   readonly showHr = input(true);
+  readonly climbs = input<Climb[]>([]);
   readonly riderKg = input(0);
 
   private readonly container = viewChild.required<ElementRef<HTMLDivElement>>('chart');
@@ -56,7 +58,7 @@ export class RideChart {
       const ride = this.ride();
       const option = buildChartOption({
         ride, power: this.power(), title: this.title(), showHr: this.showHr(),
-        riderKg: this.riderKg(),
+        climbs: this.climbs(), riderKg: this.riderKg(),
       });
       this.minutes = movingMinutes(ride.seconds).minutes;
       if (!this.chart) this.chart = this.init(this.container().nativeElement);

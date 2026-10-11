@@ -25,6 +25,7 @@ export interface Climb {
   gainM: number;
   grade: number; // average over the whole climb
   movingSeconds: number; // pauses excluded
+  vamMPerH: number; // metres climbed per hour of moving time
 }
 
 export function detectClimbs(ride: Ride): Climb[] {
@@ -72,7 +73,10 @@ export function detectClimbs(ride: Ride): Climb[] {
     const [from, to] = [valid[foot], valid[top]];
     let movingSeconds = 0;
     for (let i = from; i < to; i++) movingSeconds += durations[i];
-    return { from, to, lengthM, gainM, grade: gainM / lengthM, movingSeconds };
+    return {
+      from, to, lengthM, gainM, grade: gainM / lengthM, movingSeconds,
+      vamMPerH: (gainM / movingSeconds) * 3600,
+    };
   };
 
   // Positions in `valid` of the current candidate's lowest point and the highest point after it.
@@ -97,4 +101,10 @@ export function detectClimbs(ride: Ride): Climb[] {
   const last = measure(low, high);
   if (last) climbs.push(last);
   return climbs;
+}
+
+/** m:ss, e.g. 11:07. */
+export function formatDuration(seconds: number): string {
+  const s = Math.round(seconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }

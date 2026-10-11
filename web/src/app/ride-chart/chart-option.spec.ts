@@ -1,3 +1,4 @@
+import { detectClimbs } from '../ride/climbs';
 import { DISPLAY_SMOOTHING_S, estimatePower } from '../ride/power';
 import { Ride } from '../ride/ride';
 import { buildChartOption } from './chart-option';
@@ -27,7 +28,7 @@ describe('buildChartOption', () => {
   it('puts power on a right-hand axis next to heart rate, and marks the pause', () => {
     const r = ride();
     const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, riderKg: 75,
+      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, climbs: detectClimbs(r), riderKg: 75,
     });
     const series = option['series'] as Series[];
     const yAxes = option['yAxis'] as { position?: string; show?: boolean }[];
@@ -41,7 +42,7 @@ describe('buildChartOption', () => {
   it('gives power the left axis and its own average line when shown alone', () => {
     const r = ride();
     const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: false, riderKg: 75,
+      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: false, climbs: detectClimbs(r), riderKg: 75,
     });
     const series = option['series'] as Series[];
     expect(series[0].name).toBe(POWER_SERIES);
@@ -52,7 +53,7 @@ describe('buildChartOption', () => {
   it('reads out heart rate and power under the cursor, and nothing over a gap', () => {
     const r = ride();
     const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, riderKg: 75,
+      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, climbs: detectClimbs(r), riderKg: 75,
     });
     const format = (option['tooltip'] as { formatter: Formatter }).formatter;
     const html = format([
@@ -73,7 +74,7 @@ describe('buildChartOption', () => {
   it('shades the climbs and reads out the one under the cursor', () => {
     const r = ride();
     const option = buildChartOption({
-      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, riderKg: 75,
+      ride: r, power: estimatePower(r, 90), title: 'ride.fit', showHr: true, climbs: detectClimbs(r), riderKg: 75,
     });
     const altitude = (option['series'] as Series[]).find(s => s.name === 'Altitude');
     expect(altitude?.markArea?.data.length).toBe(1);

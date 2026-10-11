@@ -1,7 +1,7 @@
 import type { EChartsCoreOption } from 'echarts/core';
 
 import { nanMax, nanMean, nanMin } from '../ride/arrays';
-import { Climb, detectClimbs } from '../ride/climbs';
+import { Climb, formatDuration } from '../ride/climbs';
 import { averagePower, DISPLAY_SMOOTHING_S, PowerEstimate } from '../ride/power';
 import { Ride } from '../ride/ride';
 import { movingMinutes, withGaps } from '../ride/timeline';
@@ -23,6 +23,7 @@ export interface ChartInput {
   power: PowerEstimate | null;
   title: string;
   showHr: boolean;
+  climbs: Climb[];
   riderKg: number; // for the climbs' W/kg
 }
 
@@ -32,7 +33,7 @@ interface TooltipParam {
 }
 
 /** Heart rate and/or estimated power; with only one, it gets the left axis alone. */
-export function buildChartOption({ ride, power, title, showHr, riderKg }: ChartInput):
+export function buildChartOption({ ride, power, title, showHr, climbs, riderKg }: ChartInput):
     EChartsCoreOption {
   const showPower = power !== null;
   // Pauses are cut out of the time axis and marked with a dotted line, never drawn as gaps.
@@ -105,7 +106,6 @@ export function buildChartOption({ ride, power, title, showHr, riderKg }: ChartI
 
   // Elevation profile as context behind the data: no axis, no legend, no hover readout.
   // Climbs are shaded bands behind it, read out on hover.
-  const climbs = detectClimbs(ride);
   const low = nanMin(ride.altitude);
   if (Number.isFinite(low)) {
     const high = nanMax(ride.altitude);
@@ -192,12 +192,9 @@ export function buildChartOption({ ride, power, title, showHr, riderKg }: ChartI
 
 function climbReadout(climb: Climb, index: number, count: number, power: PowerEstimate | null,
                       riderKg: number): string {
-  const seconds = Math.round(climb.movingSeconds);
-  const time = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-  const vam = (climb.gainM / climb.movingSeconds) * 3600;
   const lines = [
     `${climb.gainM.toFixed(0)} m over ${(climb.lengthM / 1000).toFixed(2)} km, ${(climb.grade * 100).toFixed(1)}%`,
-    `${time} min, VAM ${vam.toFixed(0)} m/h`,
+    `${formatDuration(climb.movingSeconds)} min, VAM ${climb.vamMPerH.toFixed(0)} m/h`,
   ];
   const watts = power ? averagePower(power, climb.from, climb.to) : NaN;
   if (Number.isFinite(watts)) {
