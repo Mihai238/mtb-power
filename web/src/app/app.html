@@ -76,8 +76,8 @@
       </p>
       @let rows = climbRows();
       @if (rows.length) {
-        <details class="climbs">
-          <summary>Climbs ({{ rows.length }})</summary>
+        <section class="climbs">
+          <h2>Climbs ({{ rows.length }})</h2>
           <div class="table-scroll">
             <table>
               <thead>
@@ -114,7 +114,7 @@
               </tbody>
             </table>
           </div>
-        </details>
+        </section>
       }
     }
   } @else if (!loadError()) {

@@ -31,18 +31,31 @@ describe('App', () => {
     expect(compiled.querySelector('.empty')?.textContent).toContain('Open a .fit file');
   });
 
-  it('lists the climbs in a collapsed table', async () => {
+  it('always shows the climbs table, without a toggle', async () => {
     const fixture = TestBed.createComponent(App);
     fixture.componentInstance['loaded'].set({ fileName: 'climb.fit', ride: climbingRide() });
     await fixture.whenStable();
-    const details = (fixture.nativeElement as HTMLElement).querySelector('details.climbs');
-    expect(details?.hasAttribute('open')).toBe(false);
-    expect(details?.querySelector('summary')?.textContent).toBe('Climbs (1)');
-    const cells = Array.from(details?.querySelectorAll('tbody td') ?? [], td => td.textContent);
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('details, summary')).toBeNull();
+    const climbs = page.querySelector('.climbs');
+    expect(climbs?.querySelector('h2')?.textContent).toBe('Climbs (1)');
+    const cells = Array.from(climbs?.querySelectorAll('tbody td') ?? [], td => td.textContent);
     // #, start, length, gain, grade, time, VAM, avg power, W/kg
     expect(cells.length).toBe(9);
     expect(cells.slice(0, 5)).toEqual(['1', expect.any(String), expect.any(String), '148', '6.0']);
     expect(Number(cells[7])).toBeGreaterThan(0);
+  });
+
+  it('leaves the climbs table out of a ride without climbs', async () => {
+    const fixture = TestBed.createComponent(App);
+    const ride = climbingRide();
+    ride.altitude.fill(300);
+    fixture.componentInstance['loaded'].set({ fileName: 'flat.fit', ride });
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('.chart')).not.toBeNull();
+    expect(page.querySelector('.climbs')).toBeNull();
+    expect(page.querySelector('table')).toBeNull();
   });
 
   it('shows stats for the climbs only', async () => {

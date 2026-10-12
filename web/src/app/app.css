@@ -158,9 +158,10 @@ header p {
   margin-top: 16px;
 }
 
-.climbs summary {
+.climbs h2 {
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
 }
 
 .table-scroll {
