@@ -70,11 +70,12 @@ log it.
 All of these must pass:
 
 - `npx ng test --watch=false` and `npx ng build` in `web/` (use `npx ng`: the global `ng` is too old).
-- The change works in the running app. Start `npx ng serve` in `web/` in the background (port 4200
-  may be taken by the Coder SSH forwarding, so use the port it reports), open it with the Chrome
-  DevTools tools and check every criterion the ticket changed on screen. The demo ride loads on its
-  own; other files can only be uploaded from inside the repo. Stop the server afterwards unless the
-  user wants it running.
+- The change works in the running app. If port 4300 is already in use, check that it's the user's
+  own `ng serve (mtb-power)` from `web/`, which watches the working tree, and reuse it. Otherwise
+  start `npx ng serve` in `web/` in the background and use the port it reports. Open the app with the
+  Chrome DevTools tools and check every criterion the ticket changed on screen. The demo ride loads on
+  its own; other files can only be uploaded from inside the repo. Afterwards, stop only a server you
+  started yourself, unless the user wants it running.
 - **Review loop.** A fresh agent that didn't write the code reviews `git diff <Start>` (plus new files)
   against `## Spec` and the criteria. It reports only findings with a concrete consequence (a bug,
   values that can drift apart, dead code, a false comment, a real test gap), never style, and says
