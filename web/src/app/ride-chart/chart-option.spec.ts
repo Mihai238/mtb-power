@@ -2,7 +2,7 @@ import { Climb, detectClimbs, summarizeClimbs } from '../ride/climbs';
 import { DISPLAY_SMOOTHING_S, estimatePower } from '../ride/power';
 import { Ride } from '../ride/ride';
 import { movingMinutes } from '../ride/timeline';
-import { buildChartOption, ChartInput } from './chart-option';
+import { buildChartOption, ChartInput, climbLabelsShown } from './chart-option';
 
 const POWER_SERIES = `Power on climbs, estimated (${DISPLAY_SMOOTHING_S} s avg)`;
 
@@ -88,6 +88,19 @@ describe('buildChartOption', () => {
     expect(html).toMatch(/avg \d+ W, \d\.\d W\/kg/);
   });
 
+  it('hides the climb labels it is told to', () => {
+    const r = ride();
+    const shown = (labelsShown?: boolean[]) => {
+      const option = buildChartOption({ ...input(r, true), climbLabelsShown: labelsShown });
+      const altitude = (option['series'] as Series[]).find(s => s.name === 'Altitude');
+      const [[start]] = altitude!.markArea!.data as [{ label?: { show: boolean } }][];
+      return start.label?.show ?? true;
+    };
+    expect(shown()).toBe(true);
+    expect(shown([true])).toBe(true);
+    expect(shown([false])).toBe(false);
+  });
+
   it('plots power only on climbs', () => {
     const r = ride();
     const climb = {
@@ -101,5 +114,20 @@ describe('buildChartOption', () => {
     };
     expect(plotted([])).toEqual([]);
     expect(plotted([climb])).toEqual(Array.from({ length: 11 }, (_, i) => (10 + i) / 60));
+  });
+});
+
+describe('climbLabelsShown', () => {
+  it('shows labels that clear each other', () => {
+    expect(climbLabelsShown([[0, 40], [50, 90], [100, 140]], [1, 1, 1])).toEqual([true, true, true]);
+  });
+
+  it('where labels overlap, shows only the longest climb\'s', () => {
+    expect(climbLabelsShown([[0, 40], [20, 60], [45, 85]], [5, 2, 1])).toEqual([true, false, true]);
+    expect(climbLabelsShown([[0, 40], [20, 60], [45, 85]], [1, 5, 2])).toEqual([false, true, false]);
+  });
+
+  it('hides a label without text, which blocks no other', () => {
+    expect(climbLabelsShown([[0, 40], [20, 20], [30, 70]], [1, 5, 2])).toEqual([false, false, true]);
   });
 });

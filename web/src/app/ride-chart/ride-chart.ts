@@ -15,7 +15,10 @@ import { ClimbSummary } from '../ride/climbs';
 import { averagePower, PowerEstimate } from '../ride/power';
 import { Ride } from '../ride/ride';
 import { Timeline } from '../ride/timeline';
-import { buildChartOption, POWER_SERIES_ID, selectionMarkArea } from './chart-option';
+import {
+  ALTITUDE_SERIES_ID, buildChartOption, CLIMB_LABEL_FONT, CLIMB_LABEL_PADDING_X, climbBands,
+  climbLabels, climbLabelsShown, POWER_SERIES_ID, selectionMarkArea, timeAxisEnd,
+} from './chart-option';
 
 echarts.use([
   LineChart, DataZoomComponent, GridComponent, LegendComponent, MarkAreaComponent,
@@ -54,6 +57,9 @@ export class RideChart {
   // The ride last drawn: redrawing the same ride keeps the zoom, a new one starts unzoomed.
   private drawnRide?: Ride;
   private dragStartPx: number | null = null;
+  // Which climb labels were last shown, kept across redraws so they don't flicker.
+  private labelsShown: boolean[] = [];
+  private measureContext?: CanvasRenderingContext2D | null;
 
   constructor() {
     afterRenderEffect(() => {
@@ -61,6 +67,7 @@ export class RideChart {
       const option = buildChartOption({
         ride, timeline: this.timeline(), power: this.power(), title: this.title(),
         showHr: this.showHr(), climbs: this.climbs(), riderKg: this.riderKg(),
+        climbLabelsShown: this.labelsShown,
       });
       if (!this.chart) this.chart = this.init(this.container().nativeElement);
       const sameRide = ride === this.drawnRide;
@@ -107,7 +114,46 @@ export class RideChart {
     chart.on('restore', () => {
       this.selection = null;
     });
+    // Where the labels land depends on the chart's width and zoom, so lay them out after
+    // every render. Hiding or showing labels renders again, the same way, so this settles.
+    chart.on('finished', () => this.layoutClimbLabels());
     return chart;
+  }
+
+  /** Hides the labels of shorter climbs where labels would overlap on screen. */
+  private layoutClimbLabels(): void {
+    const chart = this.chart;
+    if (!chart || !this.power()) return;
+    const summary = this.climbs();
+    const { minutes } = this.timeline();
+    const end = timeAxisEnd(minutes);
+    // ECharts centres a label on the visible part of its band.
+    const zoom = this.zoomRange() ?? { start: 0, end: 100 };
+    const toPx = (m: number) => chart.convertToPixel({ xAxisIndex: 0 }, m) as number;
+    const left = toPx((zoom.start / 100) * end);
+    const right = toPx((zoom.end / 100) * end);
+    const clamp = (px: number) => Math.min(Math.max(px, left), right);
+    const spans = climbLabels(summary.watts).map((text, k): [number, number] => {
+      const { from, to } = summary.climbs[k];
+      const middle = (clamp(toPx(minutes[from])) + clamp(toPx(minutes[to]))) / 2;
+      const half = text ? this.textWidth(text) / 2 + CLIMB_LABEL_PADDING_X : 0;
+      return [middle - half, middle + half];
+    });
+    const lengths = summary.climbs.map(c => minutes[c.to] - minutes[c.from]);
+    const shown = climbLabelsShown(spans, lengths);
+    if (shown.length === this.labelsShown.length &&
+        shown.every((s, k) => s === this.labelsShown[k])) return;
+    this.labelsShown = shown;
+    chart.setOption({
+      series: [{ id: ALTITUDE_SERIES_ID, markArea: { data: climbBands(minutes, summary, shown) } }],
+    }, { lazyUpdate: true });
+  }
+
+  private textWidth(text: string): number {
+    this.measureContext ??= document.createElement('canvas').getContext('2d');
+    if (!this.measureContext) return text.length * 7;
+    this.measureContext.font = CLIMB_LABEL_FONT;
+    return this.measureContext.measureText(text).width;
   }
 
   /** The current zoom, as percentages of the time axis. */

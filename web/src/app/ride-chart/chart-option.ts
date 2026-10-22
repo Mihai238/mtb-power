@@ -17,6 +17,13 @@ const CLIMB_COLOR = 'rgba(247, 103, 7, 0.1)';
 const CLIMB_TEXT_COLOR = '#d9480f';
 
 export const POWER_SERIES_ID = 'power';
+export const ALTITUDE_SERIES_ID = 'altitude';
+
+// The climb labels' font (fontWeight, fontSize below), for measuring them, and the least
+// space between two labels on show.
+export const CLIMB_LABEL_FONT = '600 12px sans-serif';
+export const CLIMB_LABEL_PADDING_X = 5;
+const CLIMB_LABEL_GAP = 4;
 
 export interface ChartInput {
   ride: Ride;
@@ -26,6 +33,7 @@ export interface ChartInput {
   showHr: boolean;
   climbs: ClimbSummary;
   riderKg: number; // for the climbs' W/kg
+  climbLabelsShown?: boolean[]; // per climb, from climbLabelsShown(); all shown if left out
 }
 
 interface TooltipParam {
@@ -41,7 +49,7 @@ export function buildChartOption(input: ChartInput): EChartsCoreOption {
   const showPower = power !== null;
   // Pauses are cut out of the time axis and marked with a dotted line, never drawn as gaps.
   const { minutes, pauseAt } = input.timeline;
-  const xMax = minutes.length && minutes[minutes.length - 1] > 0 ? minutes[minutes.length - 1] : 1;
+  const xMax = timeAxisEnd(minutes);
 
   const yAxes: Record<string, unknown>[] = [];
   const series: Record<string, unknown>[] = [];
@@ -113,7 +121,8 @@ export function buildChartOption(input: ChartInput): EChartsCoreOption {
     const floor = low - 0.1 * span;
     yAxes.push({ type: 'value', show: false, min: floor, max: high + 0.6 * span });
     series.push({
-      type: 'line', name: 'Altitude', yAxisIndex: yAxes.length - 1, z: 0, silent: true,
+      type: 'line', id: ALTITUDE_SERIES_ID, name: 'Altitude', yAxisIndex: yAxes.length - 1,
+      z: 0, silent: true,
       data: withGaps(minutes, ride.altitude), symbol: 'none', animation: false,
       emphasis: { disabled: true },
       lineStyle: { width: 0 }, areaStyle: { color: ALTITUDE_COLOR, opacity: 1, origin: 'start' },
@@ -123,13 +132,10 @@ export function buildChartOption(input: ChartInput): EChartsCoreOption {
         label: {
           show: power !== null, position: 'insideTop', distance: 6,
           color: CLIMB_TEXT_COLOR, fontWeight: 600, fontSize: 12,
-          backgroundColor: 'rgba(255, 255, 255, 0.85)', padding: [2, 5], borderRadius: 4,
+          backgroundColor: 'rgba(255, 255, 255, 0.85)', padding: [2, CLIMB_LABEL_PADDING_X],
+          borderRadius: 4,
         },
-        data: climbs.map((c, k) => {
-          const watts = formatWatts(climbWatts[k]);
-          const name = watts === UNKNOWN ? '' : `${watts} W`;
-          return [{ xAxis: minutes[c.from], name }, { xAxis: minutes[c.to] }];
-        }),
+        data: climbBands(minutes, input.climbs, input.climbLabelsShown ?? []),
       },
     });
   }
@@ -211,6 +217,45 @@ function climbReadout(climb: Climb, watts: number, index: number, count: number,
   }
   return `<div style="margin-top:6px;color:${CLIMB_TEXT_COLOR};font-weight:600">` +
          `Climb ${index + 1} of ${count}</div><div>${lines.join('</div><div>')}</div>`;
+}
+
+/** End of the time axis (minutes). */
+export function timeAxisEnd(minutes: Float64Array): number {
+  return minutes.length && minutes[minutes.length - 1] > 0 ? minutes[minutes.length - 1] : 1;
+}
+
+/** The climbs' shaded bands, labelled unless labelsShown says otherwise. */
+export function climbBands(minutes: Float64Array, { climbs, watts }: ClimbSummary,
+                           labelsShown: boolean[]): unknown[] {
+  return climbLabels(watts).map((name, k) => {
+    // Only ever hides: the series-wide label setting decides whether any are shown.
+    const hidden = labelsShown[k] === false ? { label: { show: false } } : {};
+    return [{ xAxis: minutes[climbs[k].from], name, ...hidden }, { xAxis: minutes[climbs[k].to] }];
+  });
+}
+
+/** Each climb's label: its average power, or '' when that's unknown. */
+export function climbLabels(climbWatts: number[]): string[] {
+  return climbWatts.map(w => {
+    const watts = formatWatts(w);
+    return watts === UNKNOWN ? '' : `${watts} W`;
+  });
+}
+
+/**
+ * Which climb labels to show, from where they span on screen ([left, right] in px) and how
+ * long each climb is. Where labels would overlap, only the longest climb's is shown.
+ */
+export function climbLabelsShown(spans: [number, number][], lengths: number[]): boolean[] {
+  const shown = spans.map(() => false);
+  const byLength = spans.map((_, k) => k).sort((a, b) => lengths[b] - lengths[a]);
+  for (const k of byLength) {
+    const [left, right] = spans[k];
+    if (right <= left) continue; // no text
+    shown[k] = spans.every(([l, r], other) =>
+      !shown[other] || r + CLIMB_LABEL_GAP <= left || right + CLIMB_LABEL_GAP <= l);
+  }
+  return shown;
 }
 
 /** Shading for a selected stretch [from, to] (minutes), labelled with its average power. */
