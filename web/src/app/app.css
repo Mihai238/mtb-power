@@ -165,30 +165,59 @@ header p {
 }
 
 .table-scroll {
+  margin-top: 8px;
   overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 .climbs table {
-  margin-top: 8px;
+  width: 100%;
   border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
 .climbs th,
 .climbs td {
-  padding: 4px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
   text-align: right;
   white-space: nowrap;
 }
 
 .climbs th {
-  vertical-align: bottom;
-  color: var(--muted);
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .climbs th span {
   display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.climbs td {
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.climbs tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.climbs tbody tr:hover {
+  background: var(--surface);
+}
+
+.climbs th:first-child,
+.climbs td:first-child {
+  width: 1%;
+  text-align: center;
+}
+
+.climbs td:first-child {
+  color: var(--muted);
 }
