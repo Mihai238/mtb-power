@@ -120,6 +120,16 @@ export class RideChart {
     return chart;
   }
 
+  /** Zooms the time axis in on climb k, from its start to its end. */
+  zoomToClimb(k: number): void {
+    const climb = this.climbs().climbs[k];
+    if (!this.chart || !climb) return;
+    const { minutes } = this.timeline();
+    this.chart.dispatchAction({
+      type: 'dataZoom', startValue: minutes[climb.from], endValue: minutes[climb.to],
+    });
+  }
+
   /** Hides the labels of shorter climbs where labels would overlap on screen. */
   private layoutClimbLabels(): void {
     const chart = this.chart;

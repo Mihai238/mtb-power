@@ -208,6 +208,10 @@ header p {
   border-bottom: none;
 }
 
+.climbs tbody tr {
+  cursor: pointer;
+}
+
 .climbs tbody tr:hover {
   background: var(--surface);
 }

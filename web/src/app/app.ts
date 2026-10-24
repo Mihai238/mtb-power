@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal, viewChild } from '@angular/core';
 
 import { ClimbText, formatClimb, formatPerKg, UNKNOWN } from './climb-format';
 import { RideChart } from './ride-chart/ride-chart';
@@ -37,6 +37,9 @@ interface ClimbRow extends ClimbText {
 })
 export class App {
   protected readonly smoothingS = DISPLAY_SMOOTHING_S;
+
+  // Deferred, so it's only there once the chart has loaded.
+  protected readonly chart = viewChild(RideChart);
 
   protected readonly loaded = signal<Loaded | null>(null);
   protected readonly loadError = signal<string | null>(null);
