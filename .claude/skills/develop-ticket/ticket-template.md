@@ -1,11 +1,11 @@
-# Ticket {{NUMBER}}: {{TITLE}}
+# Ticket #{{NUMBER}}: {{TITLE}}
 
 Start: (commit the work started from; step 5 resets to it)
 Step: 1 intake
 
 ## Spec
 
-(step 1: the ticket as written in TODO.md and as the user explained it, open questions and their answers)
+(step 1: the ticket as written in the issue and as the user explained it, open questions and their answers)
 
 ## Acceptance criteria
 

@@ -1,7 +1,7 @@
 ---
 name: develop-ticket
-description: Develop a ticket from TODO.md - acceptance criteria, tests first, implementation, quality gate (tests, build, the running app, a review loop by a fresh agent), hand-off of the uncommitted changes for the user to verify, retro. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue a ticket.
-argument-hint: <ticket number>
+description: Develop a ticket (a GitHub issue) - acceptance criteria, tests first, implementation, quality gate (tests, build, the running app, a review loop by a fresh agent), hand-off of the uncommitted changes for the user to verify, retro. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue a ticket.
+argument-hint: <issue number>
 ---
 
 # Develop ticket $ARGUMENTS
@@ -30,11 +30,12 @@ argument-hint: <ticket number>
 
 ## 1. Intake
 
-The user gives the ticket number, and the spec and acceptance criteria if `TODO.md` doesn't hold them.
+The user gives the issue number, plus any spec and acceptance criteria the issue doesn't hold.
 
 1. `git status` must be clean, since the `wip:` commits would take in anything already changed. If it
    isn't, stop and ask.
-2. If the ticket isn't in `TODO.md` yet, add it with the next number.
+2. Read the issue with `gh issue view <number> --comments`. If the user describes a ticket that has
+   no issue yet, create one with `gh issue create` and use its number.
 3. Create `.ticket.md` from the template. Set `Start:` to `git rev-parse HEAD`. Put the spec into
    `## Spec` and each criterion as Given / When / Then into the criteria table, with the level of the
    one test that proves it most cheaply. All tests are Vitest specs under `web/src/app`:
@@ -105,7 +106,7 @@ proposed message. Push only when asked.
 
 ## 6. Retro
 
-1. Ask whether to remove the ticket from `TODO.md` or mark it done, as CLAUDE.md says.
+1. Ask whether to close the issue (`gh issue close <number>`), as CLAUDE.md says.
 2. Go through `## Corrections`, `## Decisions` and the session for what the user had to correct or
    explain. Propose concrete changes to CLAUDE.md (learnings live there, not in Claude's memory) or to
    this skill, each as a one-line rule with its reason. Apply the ones the user picks and leave them
