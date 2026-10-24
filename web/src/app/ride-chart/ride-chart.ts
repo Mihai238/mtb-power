@@ -17,7 +17,7 @@ import { Ride } from '../ride/ride';
 import { Timeline } from '../ride/timeline';
 import {
   ALTITUDE_SERIES_ID, buildChartOption, CLIMB_LABEL_FONT, CLIMB_LABEL_PADDING_X, climbBands,
-  climbLabels, climbLabelsShown, POWER_SERIES_ID, selectionMarkArea, timeAxisEnd,
+  climbLabels, climbLabelsShown, POWER_SERIES_ID, selectionMarkArea, timeAxisEnd, zoomShows,
 } from './chart-option';
 
 echarts.use([
@@ -120,14 +120,22 @@ export class RideChart {
     return chart;
   }
 
-  /** Zooms the time axis in on climb k, from its start to its end. */
-  zoomToClimb(k: number): void {
+  /**
+   * Zooms the time axis in on climb k, from its start to its end, or back out to the whole ride
+   * if it shows just that climb already.
+   */
+  toggleClimbZoom(k: number): void {
     const climb = this.climbs().climbs[k];
     if (!this.chart || !climb) return;
     const { minutes } = this.timeline();
-    this.chart.dispatchAction({
-      type: 'dataZoom', startValue: minutes[climb.from], endValue: minutes[climb.to],
-    });
+    const from = minutes[climb.from];
+    const to = minutes[climb.to];
+    const zoom = this.zoomRange();
+    if (zoom && zoomShows(zoom, from, to, timeAxisEnd(minutes))) {
+      this.chart.dispatchAction({ type: 'dataZoom', start: 0, end: 100 });
+    } else {
+      this.chart.dispatchAction({ type: 'dataZoom', startValue: from, endValue: to });
+    }
   }
 
   /** Hides the labels of shorter climbs where labels would overlap on screen. */

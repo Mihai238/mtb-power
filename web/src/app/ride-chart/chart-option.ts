@@ -224,6 +224,17 @@ export function timeAxisEnd(minutes: Float64Array): number {
   return minutes.length && minutes[minutes.length - 1] > 0 ? minutes[minutes.length - 1] : 1;
 }
 
+/**
+ * Whether a zoom, in percent of the time axis, shows exactly from..to (minutes), allowing for
+ * rounding in the percentages.
+ */
+export function zoomShows(zoom: { start: number; end: number }, from: number, to: number,
+                          axisEnd: number): boolean {
+  const at = (percent: number, minutes: number) =>
+    Math.abs((percent / 100) * axisEnd - minutes) <= 1e-9 * axisEnd;
+  return at(zoom.start, from) && at(zoom.end, to);
+}
+
 /** The climbs' shaded bands, labelled unless labelsShown says otherwise. */
 export function climbBands(minutes: Float64Array, { climbs, watts }: ClimbSummary,
                            labelsShown: boolean[]): unknown[] {

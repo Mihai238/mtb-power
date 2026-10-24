@@ -97,7 +97,7 @@
               </thead>
               <tbody>
                 @for (row of rows; track $index) {
-                  <tr (click)="chart()?.zoomToClimb($index)">
+                  <tr (click)="chart()?.toggleClimbZoom($index)">
                     <td>{{ $index + 1 }}</td>
                     <td>{{ row.start }}</td>
                     <td>{{ row.length }}</td>

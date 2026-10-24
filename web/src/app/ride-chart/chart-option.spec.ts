@@ -2,7 +2,7 @@ import { Climb, detectClimbs, summarizeClimbs } from '../ride/climbs';
 import { DISPLAY_SMOOTHING_S, estimatePower } from '../ride/power';
 import { Ride } from '../ride/ride';
 import { movingMinutes } from '../ride/timeline';
-import { buildChartOption, ChartInput, climbLabelsShown } from './chart-option';
+import { buildChartOption, ChartInput, climbLabelsShown, zoomShows } from './chart-option';
 
 const POWER_SERIES = `Power on climbs, estimated (${DISPLAY_SMOOTHING_S} s avg)`;
 
@@ -129,5 +129,19 @@ describe('climbLabelsShown', () => {
 
   it('hides a label without text, which blocks no other', () => {
     expect(climbLabelsShown([[0, 40], [20, 20], [30, 70]], [1, 5, 2])).toEqual([false, false, true]);
+  });
+});
+
+describe('zoomShows', () => {
+  it('tells a zoom to exactly a stretch from any other zoom', () => {
+    // An 80 min axis: 25-50% is 20-40 min.
+    expect(zoomShows({ start: 25, end: 50 }, 20, 40, 80)).toBe(true);
+    expect(zoomShows({ start: 25, end: 51 }, 20, 40, 80)).toBe(false);
+    expect(zoomShows({ start: 24, end: 50 }, 20, 40, 80)).toBe(false);
+    expect(zoomShows({ start: 0, end: 100 }, 20, 40, 80)).toBe(false);
+  });
+
+  it('allows for rounding in the zoom percentages', () => {
+    expect(zoomShows({ start: 100 / 3 + 1e-12, end: 200 / 3 }, 20, 40, 60)).toBe(true);
   });
 });
