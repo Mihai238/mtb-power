@@ -23,12 +23,54 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('asks for a file before one is opened', async () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('opens on the home page, with a file picker and the demo ride', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch');
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('MTB power');
-    expect(compiled.querySelector('.empty')?.textContent).toContain('Open a .fit file');
+    const page = fixture.nativeElement as HTMLElement;
+    const home = page.querySelector('app-home');
+    expect(home?.querySelector('h1')?.textContent).toContain('MTB power');
+    expect(home?.querySelector('input[type="file"]')).not.toBeNull();
+    expect(Array.from(home?.querySelectorAll('button') ?? [], b => b.textContent?.trim()))
+      .toContain('Try the demo ride');
+    // The demo waits to be asked for, and the analyser waits for a ride.
+    expect(fetch).not.toHaveBeenCalled();
+    expect(page.querySelector('.controls')).toBeNull();
+  });
+
+  it('describes every photo on the home page and credits its photographer', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const home = (fixture.nativeElement as HTMLElement).querySelector('app-home')!;
+    const photos = Array.from(home.querySelectorAll('img'));
+    expect(photos.length).toBe(4);
+    for (const photo of photos) expect(photo.alt.trim()).not.toBe('');
+    const credits = Array.from(home.querySelectorAll('.credits a[href*="unsplash.com/@"]'));
+    expect(credits.length).toBe(4);
+  });
+
+  it('leaves the home page once a ride is open', async () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.componentInstance['loaded'].set({ fileName: 'climb.fit', ride: climbingRide() });
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    expect(page.querySelector('app-home')).toBeNull();
+    expect(page.querySelector('.controls')).not.toBeNull();
+  });
+
+  it('loads the demo ride when asked, and says so when it cannot', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const demo = Array.from(page.querySelectorAll<HTMLButtonElement>('app-home button'))
+      .find(b => b.textContent?.includes('Try the demo ride'))!;
+    demo.click();
+    await vi.waitFor(() => expect(page.querySelector('[role="alert"]')).not.toBeNull());
+    expect(fetch).toHaveBeenCalledWith('demo-ride.fit');
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Could not load the demo ride');
   });
 
   it('always shows the climbs table, without a toggle', async () => {

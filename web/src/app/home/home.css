@@ -1,0 +1,235 @@
+:host {
+  display: block;
+}
+
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: clamp(460px, 78vh, 720px);
+  overflow: hidden;
+  background: #1d2a1f;
+  color: #fff;
+}
+
+.hero-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 65% 15%;
+}
+
+/* Darkens the side the text sits on, so it reads over any part of the photo. */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(10, 16, 12, 0.82) 0%, rgba(10, 16, 12, 0.55) 45%,
+                              rgba(10, 16, 12, 0) 80%);
+}
+
+.hero-text {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.hero-text > * {
+  max-width: 460px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(40px, 7vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  margin: 12px 0 0;
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 600;
+}
+
+.lead {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  padding: 11px 20px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.primary:hover {
+  background: #1971c2;
+}
+
+.primary input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.primary:focus-within,
+.secondary:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.secondary {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.secondary:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.hint {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+}
+
+.content {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px 24px 40px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.features article {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.features img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+/* A tall photo: keep the rider in the berm in view. */
+.features img.valley {
+  object-position: center 78%;
+}
+
+.features h2 {
+  margin: 18px 20px 0;
+  font-size: 18px;
+}
+
+.features p {
+  margin: 8px 20px 22px;
+  color: var(--muted);
+}
+
+.steps {
+  margin-top: 56px;
+}
+
+.steps h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.steps ol {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px 24px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  position: relative;
+  padding-left: 48px;
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: -2px;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.credits {
+  margin: 56px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.credits a {
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .hero {
+    align-items: flex-end;
+  }
+
+  /* On a phone the text sits at the bottom, over the darkened lower part. */
+  .hero::after {
+    background: linear-gradient(0deg, rgba(10, 16, 12, 0.9) 0%, rgba(10, 16, 12, 0.6) 55%,
+                                rgba(10, 16, 12, 0.1) 100%);
+  }
+
+  .hero-text {
+    padding: 32px 16px;
+  }
+
+  .content {
+    padding: 40px 16px 32px;
+  }
+}

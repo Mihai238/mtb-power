@@ -74,8 +74,9 @@ All of these must pass:
 - The change works in the running app. If port 4300 is already in use, check that it's the user's
   own `ng serve (mtb-power)` from `web/`, which watches the working tree, and reuse it. Otherwise
   start `npx ng serve` in `web/` in the background and use the port it reports. Open the app with the
-  Chrome DevTools tools and check every criterion the ticket changed on screen. The demo ride loads on
-  its own; other files can only be uploaded from inside the repo. Afterwards, stop only a server you
+  Chrome DevTools tools and check every criterion the ticket changed on screen. The app opens on the
+  home page; its "Try the demo ride" button loads the demo, and other files can only be uploaded from
+  inside the repo. Afterwards, stop only a server you
   started yourself, unless the user wants it running.
 - **Review loop.** A fresh agent that didn't write the code reviews `git diff <Start>` (plus new files)
   against `## Spec` and the criteria. It reports only findings with a concrete consequence (a bug,

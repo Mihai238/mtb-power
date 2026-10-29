@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, signal, viewChild } from '@angular/core';
 
 import { ClimbText, formatClimb, formatPerKg, UNKNOWN } from './climb-format';
+import { Home } from './home/home';
 import { RideChart } from './ride-chart/ride-chart';
 import { detectClimbs, summarizeClimbs } from './ride/climbs';
 import { DISPLAY_SMOOTHING_S, estimatePower, hasPowerData } from './ride/power';
 import { hasHeartRate, Ride } from './ride/ride';
 import { movingMinutes } from './ride/timeline';
 
-// Shown until the rider opens a file of their own. Relative, so it resolves against the base href.
+// Opened from the home page. Relative, so it resolves against the base href.
 const DEMO_FILE = 'demo-ride.fit';
 
 interface Loaded {
@@ -30,7 +31,7 @@ interface ClimbRow extends ClimbText {
 
 @Component({
   selector: 'app-root',
-  imports: [RideChart],
+  imports: [Home, RideChart],
   templateUrl: './app.html',
   styleUrl: './app.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -141,10 +142,6 @@ export class App {
     return view;
   });
 
-  constructor() {
-    void this.openDemo();
-  }
-
   protected async open(file: File | undefined): Promise<void> {
     if (!file) return;
     try {
@@ -159,17 +156,13 @@ export class App {
     }
   }
 
-  private async openDemo(): Promise<void> {
+  protected async openDemo(): Promise<void> {
     try {
       const response = await fetch(DEMO_FILE);
-      if (!response.ok) return;
-      const bytes = await response.arrayBuffer();
-      const { loadRide } = await import('./ride/fit-file');
-      // The rider may have opened a file of their own in the meantime.
-      if (this.loaded() || this.loadError()) return;
-      this.loaded.set({ fileName: DEMO_FILE, ride: loadRide(bytes) });
-    } catch {
-      // Without the demo the page just asks for a file.
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
+      await this.open(new File([await response.blob()], DEMO_FILE));
+    } catch (error) {
+      this.loadError.set(`Could not load the demo ride: ${error instanceof Error ? error.message : error}`);
     }
   }
 

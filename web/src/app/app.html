@@ -1,123 +1,127 @@
 <main (dragover)="onDragOver($event)" (dragleave)="dragging.set(false)" (drop)="onDrop($event)"
       [class.dragging]="dragging()">
-  <header>
-    <h1>MTB power</h1>
-    <p>Heart rate and estimated power from a .fit ride. The file is read in your browser and never uploaded.</p>
-  </header>
+  @if (!loaded() && !loadError()) {
+    <app-home (openFile)="open($event)" (openDemo)="openDemo()" />
+  } @else {
+    <div class="analyser">
+      <header>
+        <h1>MTB power</h1>
+        <p>Heart rate and estimated power from a .fit ride. The file is read in your browser and never uploaded.</p>
+      </header>
 
-  <section class="controls" aria-label="Ride and settings">
-    <label class="file">
-      <input type="file" accept=".fit" (change)="onFileInput($event)">
-      <span class="file-button">{{ loaded() ? 'Open another file' : 'Choose .fit file' }}</span>
-      <span class="file-hint">{{ loaded()?.fileName ?? 'or drop it anywhere on the page' }}</span>
-    </label>
+      <section class="controls" aria-label="Ride and settings">
+        <label class="file">
+          <input type="file" accept=".fit" (change)="onFileInput($event)">
+          <span class="file-button">{{ loaded() ? 'Open another file' : 'Choose .fit file' }}</span>
+          <span class="file-hint">{{ loaded()?.fileName ?? 'or drop it anywhere on the page' }}</span>
+        </label>
 
-    <div class="settings">
-      <label>
-        Rider
-        <span class="unit-input">
-          <input type="number" min="1" step="0.5" [value]="riderWeight()"
-                 (input)="riderWeight.set(numberFrom($event))"> kg
-        </span>
-      </label>
-      <label>
-        Bike
-        <span class="unit-input">
-          <input type="number" min="0" step="0.5" [value]="bikeWeight()"
-                 (input)="bikeWeight.set(numberFrom($event))"> kg
-        </span>
-      </label>
-      <label>
-        Gear
-        <span class="unit-input">
-          <input type="number" min="0" step="0.5" [value]="gearWeight()"
-                 (input)="gearWeight.set(numberFrom($event))"> kg
-        </span>
-      </label>
-    </div>
-  </section>
+        <div class="settings">
+          <label>
+            Rider
+            <span class="unit-input">
+              <input type="number" min="1" step="0.5" [value]="riderWeight()"
+                     (input)="riderWeight.set(numberFrom($event))"> kg
+            </span>
+          </label>
+          <label>
+            Bike
+            <span class="unit-input">
+              <input type="number" min="0" step="0.5" [value]="bikeWeight()"
+                     (input)="bikeWeight.set(numberFrom($event))"> kg
+            </span>
+          </label>
+          <label>
+            Gear
+            <span class="unit-input">
+              <input type="number" min="0" step="0.5" [value]="gearWeight()"
+                     (input)="gearWeight.set(numberFrom($event))"> kg
+            </span>
+          </label>
+        </div>
+      </section>
 
-  @if (loadError(); as error) {
-    <p class="message error" role="alert">{{ error }}</p>
-  }
+      @if (loadError(); as error) {
+        <p class="message error" role="alert">{{ error }}</p>
+      }
 
-  @if (view(); as view) {
-    @for (notice of view.notices; track notice) {
-      <p class="message">{{ notice }}</p>
-    }
-    @if (view.error) {
-      <p class="message error" role="alert">{{ view.error }}</p>
-    } @else {
-      <dl class="stats">
-        @for (stat of view.stats; track stat.label) {
-          <div>
-            <dt>{{ stat.label }}</dt>
-            <dd>{{ stat.value }} <span>{{ stat.unit }}</span></dd>
-          </div>
+      @if (view(); as view) {
+        @for (notice of view.notices; track notice) {
+          <p class="message">{{ notice }}</p>
         }
-      </dl>
-      @if (power()) {
-        <p class="note">
-          Power is estimated from speed and elevation for a mountain bike and {{ totalMass() }} kg rider + bike + gear,
-          plotted only on climbs, as a {{ smoothingS }} s average.
-        </p>
-      }
-      @defer {
-        <app-ride-chart class="chart"
-                        [ride]="loaded()!.ride" [timeline]="timeline()!" [power]="power()"
-                        [title]="loaded()!.fileName"
-                        [showHr]="view.showHr" [climbs]="climbSummary()!" [riderKg]="riderWeight()" />
-      } @placeholder {
-        <div class="chart"></div>
-      }
-      <p class="note">
-        Pinch or ctrl + scroll to zoom, shift + drag to pan.
-        @if (power()) { Drag across the chart to see the average power of that stretch, click to clear. }
-      </p>
-      @let rows = climbRows();
-      @if (rows.length) {
-        <section class="climbs">
-          <h2>Climbs ({{ rows.length }})</h2>
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Start <span>min</span></th>
-                  <th>Length <span>km</span></th>
-                  <th>Gain <span>m</span></th>
-                  <th>Grade <span>%</span></th>
-                  <th>Time <span>m:ss</span></th>
-                  <th>VAM <span>m/h</span></th>
-                  @if (power()) {
-                    <th>Avg power <span>W</span></th>
-                    <th>W/kg</th>
-                  }
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of rows; track $index) {
-                  <tr (click)="chart()?.toggleClimbZoom($index)">
-                    <td>{{ $index + 1 }}</td>
-                    <td>{{ row.start }}</td>
-                    <td>{{ row.length }}</td>
-                    <td>{{ row.gain }}</td>
-                    <td>{{ row.grade }}</td>
-                    <td>{{ row.time }}</td>
-                    <td>{{ row.vam }}</td>
-                    @if (power()) {
-                      <td>{{ row.power }}</td>
-                      <td>{{ row.perKg }}</td>
+        @if (view.error) {
+          <p class="message error" role="alert">{{ view.error }}</p>
+        } @else {
+          <dl class="stats">
+            @for (stat of view.stats; track stat.label) {
+              <div>
+                <dt>{{ stat.label }}</dt>
+                <dd>{{ stat.value }} <span>{{ stat.unit }}</span></dd>
+              </div>
+            }
+          </dl>
+          @if (power()) {
+            <p class="note">
+              Power is estimated from speed and elevation for a mountain bike and {{ totalMass() }} kg rider + bike + gear,
+              plotted only on climbs, as a {{ smoothingS }} s average.
+            </p>
+          }
+          @defer {
+            <app-ride-chart class="chart"
+                            [ride]="loaded()!.ride" [timeline]="timeline()!" [power]="power()"
+                            [title]="loaded()!.fileName"
+                            [showHr]="view.showHr" [climbs]="climbSummary()!" [riderKg]="riderWeight()" />
+          } @placeholder {
+            <div class="chart"></div>
+          }
+          <p class="note">
+            Pinch or ctrl + scroll to zoom, shift + drag to pan.
+            @if (power()) { Drag across the chart to see the average power of that stretch, click to clear. }
+          </p>
+          @let rows = climbRows();
+          @if (rows.length) {
+            <section class="climbs">
+              <h2>Climbs ({{ rows.length }})</h2>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Start <span>min</span></th>
+                      <th>Length <span>km</span></th>
+                      <th>Gain <span>m</span></th>
+                      <th>Grade <span>%</span></th>
+                      <th>Time <span>m:ss</span></th>
+                      <th>VAM <span>m/h</span></th>
+                      @if (power()) {
+                        <th>Avg power <span>W</span></th>
+                        <th>W/kg</th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of rows; track $index) {
+                      <tr (click)="chart()?.toggleClimbZoom($index)">
+                        <td>{{ $index + 1 }}</td>
+                        <td>{{ row.start }}</td>
+                        <td>{{ row.length }}</td>
+                        <td>{{ row.gain }}</td>
+                        <td>{{ row.grade }}</td>
+                        <td>{{ row.time }}</td>
+                        <td>{{ row.vam }}</td>
+                        @if (power()) {
+                          <td>{{ row.power }}</td>
+                          <td>{{ row.perKg }}</td>
+                        }
+                      </tr>
                     }
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          }
+        }
       }
-    }
-  } @else if (!loadError()) {
-    <div class="empty">Open a .fit file to see its heart rate and estimated power.</div>
+    </div>
   }
 </main>

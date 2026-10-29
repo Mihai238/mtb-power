@@ -1,0 +1,68 @@
+<section class="hero">
+  <img class="hero-photo" src="images/hero-forest-turn.jpg" width="1600" height="1066" fetchpriority="high"
+       alt="A mountain biker leans into a dusty turn on a forest trail">
+  <div class="hero-text">
+    <h1>MTB power</h1>
+    <p class="tagline">See what every climb took.</p>
+    <p class="lead">
+      Heart rate and estimated power for your mountain-bike rides, from the .fit file your bike computer
+      or watch records.
+    </p>
+    <div class="actions">
+      <label class="button primary">
+        <input type="file" accept=".fit" (change)="onFileInput($event)">
+        Open your ride
+      </label>
+      <button type="button" class="button secondary" (click)="openDemo.emit()">Try the demo ride</button>
+    </div>
+    <p class="hint">or drop a .fit file anywhere on the page</p>
+  </div>
+</section>
+
+<div class="content">
+  <section class="features" aria-label="What it shows">
+    <article>
+      <img src="images/forest-trail.jpg" width="800" height="450" loading="lazy"
+           alt="A rider on a narrow trail through green forest">
+      <h2>Every climb, measured</h2>
+      <p>
+        Climbs are found on their own. Each one gets its length, gain, grade, time and VAM, marked on the
+        chart and listed in a table.
+      </p>
+    </article>
+    <article>
+      <img src="images/valley-bend.jpg" width="800" height="964" loading="lazy" class="valley"
+           alt="A rider carves a berm high above a forested valley and a lake">
+      <h2>Power without a power meter</h2>
+      <p>
+        Power is estimated from speed, elevation and the weight of rider, bike and gear, with your average
+        on every climb in watts and W/kg.
+      </p>
+    </article>
+    <article>
+      <img src="images/parked-bike.jpg" width="800" height="533" loading="lazy"
+           alt="A mountain bike parked against a mossy tree beside a forest trail">
+      <h2>Stays on your device</h2>
+      <p>
+        Your file is read right here in the browser. Nothing is uploaded, and there's no account to make.
+      </p>
+    </article>
+  </section>
+
+  <section class="steps">
+    <h2>How it works</h2>
+    <ol>
+      <li>Export the .fit file of a ride from your bike computer, watch or training app.</li>
+      <li>Open it here, or drop it on the page.</li>
+      <li>Set your weights and read your climbs: heart rate, power and a chart of the whole ride.</li>
+    </ol>
+  </section>
+
+  <p class="credits">
+    Photos on Unsplash by
+    <a href="https://unsplash.com/@axelbrunst" target="_blank" rel="noopener">Axel Brunst</a>,
+    <a href="https://unsplash.com/@sunilcsharma" target="_blank" rel="noopener">Sunil Chandra Sharma</a>,
+    <a href="https://unsplash.com/@algifoods" target="_blank" rel="noopener">Algi</a> and
+    <a href="https://unsplash.com/@greg_rosenke" target="_blank" rel="noopener">Greg Rosenke</a>.
+  </p>
+</div>
