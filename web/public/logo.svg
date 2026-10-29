@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>MTB power</title>
+  <rect width="64" height="64" rx="14" fill="#1c7ed6"/>
+  <path d="M5 53 L23 25 L30 35 L39 20 L59 53 Z" fill="#fff"/>
+  <path d="M43 6 L33 25 L40 25 L35 41 L49 19 L42 19 L47 6 Z" fill="#ff922b" stroke="#1c7ed6"
+        stroke-width="2.5" stroke-linejoin="round" paint-order="stroke"/>
+</svg>

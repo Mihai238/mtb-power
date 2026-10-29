@@ -3,11 +3,15 @@
   @if (!loaded() && !loadError()) {
     <app-home (openFile)="open($event)" (openDemo)="openDemo()" />
   } @else {
+    <header class="topbar">
+      <h1>
+        <a href="." (click)="goHome($event)">
+          <img class="logo" src="logo.svg" alt="" width="28" height="28">MTB power</a>
+      </h1>
+    </header>
+
     <div class="analyser">
-      <header>
-        <h1>MTB power</h1>
-        <p>Heart rate and estimated power from a .fit ride. The file is read in your browser and never uploaded.</p>
-      </header>
+      <p class="intro">Heart rate and estimated power from a .fit ride. The file is read in your browser and never uploaded.</p>
 
       <section class="controls" aria-label="Ride and settings">
         <label class="file">

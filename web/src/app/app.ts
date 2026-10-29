@@ -166,6 +166,14 @@ export class App {
     }
   }
 
+  /** Closes the ride and shows the home page, without reloading (the weights stay). */
+  protected goHome(event: MouseEvent): void {
+    event.preventDefault();
+    this.loaded.set(null);
+    this.loadError.set(null);
+    scrollTo(0, 0);
+  }
+
   protected onFileInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     void this.open(input.files?.[0]);

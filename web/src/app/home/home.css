@@ -44,10 +44,20 @@
 }
 
 h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
   margin: 0;
   font-size: clamp(40px, 7vw, 64px);
   line-height: 1.05;
   letter-spacing: -0.02em;
+}
+
+/* As tall as the capitals of the name beside it. */
+h1 .logo {
+  width: 0.95em;
+  height: 0.95em;
+  flex: none;
 }
 
 .tagline {

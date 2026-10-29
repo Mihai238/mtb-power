@@ -44,11 +44,25 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const home = (fixture.nativeElement as HTMLElement).querySelector('app-home')!;
-    const photos = Array.from(home.querySelectorAll('img'));
+    const photos = Array.from(home.querySelectorAll<HTMLImageElement>('img:not(.logo)'));
     expect(photos.length).toBe(4);
     for (const photo of photos) expect(photo.alt.trim()).not.toBe('');
     const credits = Array.from(home.querySelectorAll('.credits a[href*="unsplash.com/@"]'));
     expect(credits.length).toBe(4);
+  });
+
+  it('shows the logo by the title, on the home page and in the analyser', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const logo = () => page.querySelector<HTMLImageElement>('h1 img.logo');
+    expect(page.querySelector('app-home h1 img.logo')).not.toBeNull();
+    expect(logo()?.getAttribute('src')).toBe('logo.svg');
+    // Beside the name, so it's decoration for screen readers.
+    expect(logo()?.alt).toBe('');
+    fixture.componentInstance['loaded'].set({ fileName: 'climb.fit', ride: climbingRide() });
+    await fixture.whenStable();
+    expect(page.querySelector('header h1 a img.logo')?.getAttribute('src')).toBe('logo.svg');
   });
 
   it('leaves the home page once a ride is open', async () => {
@@ -58,6 +72,21 @@ describe('App', () => {
     const page = fixture.nativeElement as HTMLElement;
     expect(page.querySelector('app-home')).toBeNull();
     expect(page.querySelector('.controls')).not.toBeNull();
+  });
+
+  it('goes back to the home page from the title', async () => {
+    // jsdom has no scrolling.
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const fixture = TestBed.createComponent(App);
+    fixture.componentInstance['loaded'].set({ fileName: 'climb.fit', ride: climbingRide() });
+    await fixture.whenStable();
+    const page = fixture.nativeElement as HTMLElement;
+    const home = page.querySelector<HTMLAnchorElement>('header h1 a');
+    expect(home?.textContent).toBe('MTB power');
+    home!.click();
+    await fixture.whenStable();
+    expect(page.querySelector('app-home')).not.toBeNull();
+    expect(page.querySelector('.controls')).toBeNull();
   });
 
   it('loads the demo ride when asked, and says so when it cannot', async () => {
