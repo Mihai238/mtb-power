@@ -71,7 +71,7 @@
             </p>
           }
           @defer {
-            <app-ride-chart class="chart"
+            <app-ride-chart #rideChart class="chart"
                             [ride]="loaded()!.ride" [timeline]="timeline()!" [power]="power()"
                             [title]="loaded()!.fileName"
                             [showHr]="view.showHr" [climbs]="climbSummary()!" [riderKg]="riderWeight()" />

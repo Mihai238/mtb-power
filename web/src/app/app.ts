@@ -39,8 +39,9 @@ interface ClimbRow extends ClimbText {
 export class App {
   protected readonly smoothingS = DISPLAY_SMOOTHING_S;
 
-  // Deferred, so it's only there once the chart has loaded.
-  protected readonly chart = viewChild(RideChart);
+  // Deferred, so it's only there once the chart has loaded. Queried by template name, not by
+  // class: using RideChart as a value here would pull ECharts into the initial bundle.
+  protected readonly chart = viewChild<RideChart>('rideChart');
 
   protected readonly loaded = signal<Loaded | null>(null);
   protected readonly loadError = signal<string | null>(null);
