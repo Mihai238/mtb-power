@@ -12,13 +12,17 @@
   color: #fff;
 }
 
+/* Fills the right of the hero, so the rider stays clear of the text, and fades into the dark
+   background on its left. */
 .hero-photo {
   position: absolute;
-  inset: 0;
-  width: 100%;
+  top: 0;
+  right: 0;
+  width: 72%;
   height: 100%;
   object-fit: cover;
-  object-position: 65% 15%;
+  object-position: center 10%;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 35%);
 }
 
 /* Darkens the side the text sits on, so it reads over any part of the photo. */
@@ -227,6 +231,11 @@ h1 .logo {
 @media (max-width: 640px) {
   .hero {
     align-items: flex-end;
+  }
+
+  .hero-photo {
+    width: 100%;
+    mask-image: none;
   }
 
   /* On a phone the text sits at the bottom, over the darkened lower part. */

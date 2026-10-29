@@ -47,8 +47,9 @@ describe('App', () => {
     const photos = Array.from(home.querySelectorAll<HTMLImageElement>('img:not(.logo)'));
     expect(photos.length).toBe(4);
     for (const photo of photos) expect(photo.alt.trim()).not.toBe('');
-    const credits = Array.from(home.querySelectorAll('.credits a[href*="unsplash.com/@"]'));
+    const credits = home.querySelectorAll('.credits a[href*="unsplash.com/@"], .credits a[href*="pexels.com/@"]');
     expect(credits.length).toBe(4);
+    expect(home.querySelector('.credits a[href*="pexels.com/@jeferson-gonzalez"]')).not.toBeNull();
   });
 
   it('shows the logo by the title, on the home page and in the analyser', async () => {
